@@ -1,0 +1,1224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Solunar &amp; Tide Playbook</title>
+<meta name="description" content="Solunar feeding windows, NOAA tides, live water level and wind, and the NWS forecast for Texas coast fishing spots.">
+<meta name="theme-color" content="#0a1822">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Playbook">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a1822'/%3E%3Ccircle cx='32' cy='30' r='17' fill='%23f0b445'/%3E%3Ccircle cx='39' cy='25' r='15' fill='%230a1822'/%3E%3Cpath d='M8 48q8-6 16 0t16 0t16 0' stroke='%235bb7d5' stroke-width='4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sofia+Sans:wght@400;500;600;700&family=Sofia+Sans+Extra+Condensed:wght@600;700;800&display=swap">
+<style>
+/* Layout: phone-first single column (spot, right now, day strip, the day's windows + chart, tides, forecast, notes); two columns from 900px. Dark-first: pre-dawn launch at the ramp. */
+:root{
+  --bg:#0a1822; --surface:#0f2230; --raised:#15303f; --line:#22414f;
+  --fg:#e7eef1; --muted:#8ea5b1;
+  --sun:#f0b445; --sun-ink:#1d1405; --sun-soft:rgba(240,180,69,.16);
+  --sand:#cdb98a; --water:#5bb7d5; --water-soft:rgba(91,183,213,.18);
+  --alert:#ef8a62;
+  --night:rgba(2,8,13,.42); --moon-dark:#1b3646; --moon-lit:#efe8d2;
+  --font-display:"Sofia Sans Extra Condensed","Roboto Condensed","Arial Narrow",sans-serif;
+  --font-body:"Sofia Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root{
+    --bg:#edf2f3; --surface:#ffffff; --raised:#e5edef; --line:#c9d6da;
+    --fg:#0c2230; --muted:#516c7a;
+    --sun:#a86a04; --sun-ink:#fff8ea; --sun-soft:rgba(168,106,4,.13);
+    --sand:#7d6135; --water:#1a789c; --water-soft:rgba(26,120,156,.15);
+    --alert:#b4471f;
+    --night:rgba(12,34,48,.07); --moon-dark:#2b4654; --moon-lit:#f6efd9;
+    color-scheme:light;
+  }
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 var(--font-body);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin:0 auto;padding-top:max(20px,env(safe-area-inset-top,0px));padding-bottom:max(40px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:20px}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+.label{margin:0;font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.small{font-size:14px;color:var(--muted);margin:0}
+
+/* Header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:6px 16px}
+h1{font-family:var(--font-display);font-weight:800;font-size:clamp(36px,9vw,54px);line-height:.92;margin:6px 0 0;text-wrap:balance}
+h1 span{color:var(--sun)}
+.clock{margin:0;font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+/* Spot picker */
+.spot{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 12px;align-items:center}
+.spot-name{margin:3px 0 0;font-family:var(--font-display);font-size:30px;font-weight:800;line-height:1;text-wrap:balance}
+.spot-sub{margin:5px 0 0;font-size:14px;color:var(--muted)}
+.spot-sub b{color:var(--water);font-weight:700}
+.spot-panel{grid-column:1 / -1;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.spot-panel input{width:100%;background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:11px 12px;font-size:16px}
+.spot-results{list-style:none;margin:0;padding:0;max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:2px}
+.spot-results .grp{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px}
+.spot-results button{width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:9px 10px;cursor:pointer;display:flex;flex-direction:column;gap:1px}
+.spot-results button:hover,.spot-results button:focus-visible{background:var(--raised)}
+.spot-results button[aria-current="true"] .rn{color:var(--sun)}
+.spot-results .coords button{border:1px dashed var(--water)}
+.rn{font-weight:700}
+.rs{font-size:13px;color:var(--muted)}
+.none{font-size:14px;color:var(--muted);padding:8px 10px}
+.warn{color:var(--sun)}
+
+/* Right now */
+.live-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.live-src{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+.tv{margin:4px 0 0;font-family:var(--font-display);font-size:clamp(24px,7vw,32px);font-weight:800;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tv small{font-size:.55em;font-weight:700;color:var(--muted);margin-left:2px}
+.ts{margin:5px 0 0;font-size:12.5px;line-height:1.3;color:var(--muted)}
+.ts.hot{color:var(--alert);font-weight:700}
+.tile.wait .tv{color:var(--line)}
+
+/* Day strip */
+.strip-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+.tools{display:flex;gap:8px;align-items:center}
+.pill{background:var(--raised);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;font-weight:600;cursor:pointer;min-width:0;white-space:nowrap}
+input.pill{padding:5px 10px}
+.strip{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 8px;scroll-snap-type:x proximity;scrollbar-width:thin}
+.day{flex:0 0 62px;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 4px 10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer}
+.day[aria-pressed="true"]{border-color:var(--sun);background:var(--sun-soft)}
+.day .dow{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.day.is-today .dow{color:var(--sun)}
+.day .dnum{font-family:var(--font-display);font-size:26px;font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+.dots{display:flex;gap:3px}
+.dots i{width:5px;height:5px;border-radius:50%;background:var(--line)}
+.dots i.on{background:var(--sun)}
+.moon{display:block;flex:none}
+.m-dark{fill:var(--moon-dark);stroke:var(--line);stroke-width:1}
+.m-lit{fill:var(--moon-lit)}
+
+/* Grid */
+.grid{display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){.grid{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr);align-items:start}}
+.side{display:flex;flex-direction:column;gap:20px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+
+/* Day panel */
+.day-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-start;gap:10px 16px}
+.day-title{font-family:var(--font-display);font-weight:800;font-size:42px;line-height:.95;margin:2px 0 0}
+.phase{margin:8px 0 0;color:var(--muted);display:flex;align-items:center;gap:8px}
+.rating{display:flex;align-items:center;gap:8px;padding-top:4px}
+.stars{font-size:20px;letter-spacing:2px;color:var(--line);line-height:1}
+.stars .on{color:var(--sun)}
+.rating-word{font-weight:700;font-size:15px}
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px;margin:16px 0 18px;padding:12px 0;border-block:1px solid var(--line)}
+@media (min-width:520px){.facts{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.facts dt{font-size:13px;color:var(--muted)}
+.facts dd{margin:0;font-family:var(--font-display);font-size:23px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.windows{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.win{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:12px;padding:10px 12px;border-radius:12px;background:var(--raised);border:1px solid transparent}
+.win .kind{grid-row:1 / span 2;justify-self:start;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+.win.major .kind{background:var(--sun);color:var(--sun-ink)}
+.win.minor .kind{border:1px solid var(--sand);color:var(--sand)}
+.win .time{font-family:var(--font-display);font-size:clamp(20px,5.6vw,25px);font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums;white-space:nowrap}
+.win .src{grid-column:2;font-size:14px;color:var(--muted)}
+.win .src b{color:var(--sun);font-weight:700}
+.win .src .wx{color:var(--water)}
+.win .status{grid-row:1 / span 2;grid-column:3;font-size:13px;font-weight:700;color:var(--muted);text-align:right;white-space:nowrap}
+.win.is-now{border-color:var(--sun)}
+.win.is-now .status{color:var(--sun)}
+.win.is-past{opacity:.5}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+.chart{margin:18px 0 0}
+.chart svg{display:block;width:100%;height:auto;max-height:260px}
+.c-night{fill:var(--night)}
+.c-grid{stroke:var(--line);stroke-width:1;stroke-dasharray:2 3}
+.c-line{fill:none;stroke:var(--sun);stroke-width:2;stroke-linejoin:round}
+.c-rail{fill:var(--raised)}
+.c-major{fill:var(--sun)}
+.c-minor{fill:var(--sand)}
+.c-axis{fill:var(--muted);font:600 10px var(--font-body)}
+.c-now{stroke:var(--fg);stroke-width:1.5;stroke-dasharray:3 3}
+.c-nowt{fill:var(--fg);font:700 10px var(--font-body)}
+.c-peak{fill:var(--sun);stroke:var(--surface);stroke-width:2}
+.c-tline{fill:none;stroke:var(--water);stroke-width:2;stroke-linejoin:round}
+.c-tdot{fill:var(--water);stroke:var(--surface);stroke-width:2}
+.c-tval{fill:var(--fg);font:700 10px var(--font-body)}
+.c-msg{fill:var(--muted);font:600 12px var(--font-body)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:12px;height:8px;border-radius:2px;margin-right:6px;vertical-align:0}
+
+/* Tides panel */
+.est{font-size:12px;font-weight:700;color:var(--water);border:1px solid var(--water);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.strength{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;margin:0}
+.strength b{font-family:var(--font-display);font-size:34px;font-weight:800;line-height:1;color:var(--water)}
+.strength span{color:var(--muted);font-size:14px}
+.tchart{display:block;width:100%;height:auto;margin:12px 0 4px}
+.hilo{list-style:none;margin:4px 0 16px;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.hilo li{background:var(--raised);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:1px}
+.hilo .ht{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hilo .hv{font-family:var(--font-display);font-size:22px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.hilo .hv small{font-size:.65em;color:var(--water);margin-left:6px}
+.spark{display:grid;grid-template-columns:repeat(14,minmax(0,1fr));gap:4px;align-items:end;height:64px}
+.spark button{height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:3px;background:none;border:0;padding:0;cursor:pointer}
+.spark .bar{display:block;width:100%;border-radius:3px 3px 1px 1px;background:var(--water-soft)}
+.spark .sel .bar{background:var(--water)}
+.spark .n{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:center}
+.spark .sel .n{color:var(--fg);font-weight:700}
+.water .small{margin-top:12px}
+.field{display:flex;flex-direction:column;gap:6px;margin-top:16px}
+.field select{background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:9px 10px;font-size:16px;width:100%}
+.links{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.links a{color:var(--water);font-weight:700;text-decoration:none;font-size:15px}
+.links a:hover{text-decoration:underline}
+
+/* Forecast */
+.fc-rows{display:flex;flex-direction:column;gap:6px}
+.fc-row{display:grid;grid-template-columns:76px minmax(0,1fr) auto;align-items:center;gap:10px;background:var(--raised);border-radius:10px;padding:9px 12px}
+.fc-row .fl{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.fc-row .fw{font-family:var(--font-display);font-size:22px;font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.fc-row .fw.hot{color:var(--alert)}
+.fc-row .fs{display:block;font-family:var(--font-body);font-size:13px;font-weight:500;color:var(--muted)}
+.fc-row .ft{text-align:right;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.fc-row .ft span{display:block;font-size:12px;font-weight:500;color:var(--muted)}
+
+/* Notes + best days */
+.notes ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.notes li{font-size:15px;line-height:1.45;max-width:62ch}
+.notes li b{display:block;color:var(--fg);font-weight:700;margin-bottom:2px}
+.notes li span{color:var(--muted)}
+.best ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.best button{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;text-align:left;background:var(--raised);border:1px solid transparent;border-radius:12px;padding:10px 12px;cursor:pointer}
+.best button[aria-pressed="true"]{border-color:var(--sun)}
+.best .bd{font-weight:700}
+.best .bp{display:block;font-size:13px;color:var(--muted)}
+.best .stars{font-size:14px;letter-spacing:1px}
+
+footer{font-size:13px;color:var(--muted);line-height:1.5;max-width:72ch;border-top:1px solid var(--line);padding-top:14px}
+footer p{margin:0 0 6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:no-preference){.strip{scroll-behavior:smooth}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="label">Texas inshore</p>
+      <h1>Solunar <span>&amp;</span> Tide Playbook</h1>
+    </div>
+    <p class="clock" id="clock">Central Time</p>
+  </header>
+
+  <section class="spot" aria-label="Fishing spot">
+    <div>
+      <p class="label">Fishing spot</p>
+      <p class="spot-name" id="spotName">Galveston Island</p>
+      <p class="spot-sub" id="spotSub"></p>
+    </div>
+    <button class="pill" id="spotToggle" type="button" aria-expanded="false" aria-controls="spotPanel">Change spot</button>
+    <div class="spot-panel" id="spotPanel" hidden>
+      <label class="sr" for="spotSearch">Search fishing spots or paste coordinates</label>
+      <input id="spotSearch" type="search" placeholder="Search spots, or paste coordinates" autocomplete="off" enterkeyhint="go">
+      <p class="small">Try “Kemah”, “jetty”, or “Trinity”. For anywhere else, paste coordinates or a Google Maps link.</p>
+      <ul class="spot-results" id="spotResults"></ul>
+    </div>
+  </section>
+
+  <section aria-label="Conditions right now">
+    <div class="live-head">
+      <div>
+        <h2 class="label">Right now</h2>
+        <p class="live-src" id="liveSrc">Checking NOAA gauges…</p>
+      </div>
+      <button class="pill" id="refreshBtn" type="button">Refresh</button>
+    </div>
+    <div class="tiles">
+      <div class="tile wait" id="tWind"><p class="label">Wind</p><p class="tv">--</p><p class="ts">Loading</p></div>
+      <div class="tile wait" id="tLevel"><p class="label">Water</p><p class="tv">--</p><p class="ts">Loading</p></div>
+      <div class="tile wait" id="tTemp"><p class="label">Temp</p><p class="tv">--</p><p class="ts">Loading</p></div>
+    </div>
+  </section>
+
+  <section aria-label="Pick a day">
+    <div class="strip-head">
+      <h2 class="label" id="stripLabel">Next two weeks</h2>
+      <div class="tools">
+        <button class="pill" id="todayBtn" type="button">Today</button>
+        <label><span class="sr">Jump to a date</span><input class="pill" type="date" id="datePick"></label>
+      </div>
+    </div>
+    <div class="strip" id="strip"></div>
+  </section>
+
+  <main class="grid">
+    <section class="panel" aria-live="polite">
+      <div class="day-head">
+        <div>
+          <p class="label" id="dayEyebrow">Selected day</p>
+          <h2 class="day-title" id="dayTitle">Loading</h2>
+          <p class="phase" id="dayPhase"></p>
+        </div>
+        <div class="rating" id="dayRating"></div>
+      </div>
+      <dl class="facts" id="facts"></dl>
+      <h3 class="label">Feeding windows</h3>
+      <ol class="windows" id="windows"></ol>
+      <figure class="chart" style="margin-inline:0">
+        <svg id="chart" viewBox="0 0 360 178" role="img" aria-label="Activity through the day"></svg>
+        <figcaption class="legend">
+          <span><i style="background:var(--sun)"></i>Major window</span>
+          <span><i style="background:var(--sand)"></i>Minor window</span>
+          <span><i style="background:var(--night);border:1px solid var(--line)"></i>Dark</span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <aside class="side">
+      <section class="panel water">
+        <div class="panel-head"><h3 class="label">Tides</h3><span class="est" id="tideBadge">Loading</span></div>
+        <p class="strength"><b id="tideWord">--</b><span id="tideWhy"></span></p>
+        <svg class="tchart" id="tideChart" viewBox="0 0 360 150" role="img" aria-label="Tide through the day"></svg>
+        <ul class="hilo" id="hilo"></ul>
+        <div class="spark" id="tideSpark" aria-label="Tide range for the two weeks shown"></div>
+        <p class="small" id="tideNote">Bars show each day's tide range.</p>
+        <div class="field">
+          <label class="label" for="station">Tide station</label>
+          <select id="station"></select>
+        </div>
+        <div class="links">
+          <a id="noaaPred" href="https://tidesandcurrents.noaa.gov/" target="_blank" rel="noopener">Full NOAA tide chart ↗</a>
+          <a id="noaaObs" href="https://tidesandcurrents.noaa.gov/" target="_blank" rel="noopener">NOAA water level page ↗</a>
+        </div>
+      </section>
+
+      <section class="panel fc">
+        <div class="panel-head"><h3 class="label">Weather forecast</h3><span class="est">NWS</span></div>
+        <div class="fc-rows" id="fc"><p class="small">Loading the forecast…</p></div>
+      </section>
+
+      <section class="panel notes">
+        <div class="panel-head"><h3 class="label">Playbook for this day</h3></div>
+        <ul id="notes"></ul>
+      </section>
+
+      <section class="panel best">
+        <div class="panel-head"><h3 class="label">Best days ahead</h3></div>
+        <ol id="best"></ol>
+      </section>
+    </aside>
+  </main>
+
+  <footer>
+    <p id="footLoc">All times are Central Time.</p>
+    <p>Major windows run one hour either side of the moon passing overhead or underfoot. Minor windows run 30 minutes either side of moonrise and moonset. Ratings weigh the moon phase, windows that land on sunrise or sunset, and how close the moon is to Earth.</p>
+    <p>Tide predictions, water level, wind, and water temperature come from NOAA Tides &amp; Currents. The forecast comes from the National Weather Service. Moon and sun times are calculated on your phone, so they work offline.</p>
+  </footer>
+</div>
+
+<script>
+// ASTRO-START
+const TZ = "America/Chicago";
+const RAD = Math.PI / 180, DAY = 86400000, HOUR = 3600000, MIN = 60000;
+const SYNODIC = 29.530588;
+const OBL = RAD * 23.4397;
+const SUN_H0 = -0.833 * RAD;
+let PHI = RAD * 29.31, LW = RAD * 94.7933;
+function setLocation(lat, lng) { PHI = RAD * lat; LW = RAD * -lng; }
+
+function toDays(ms) { return ms / DAY - 0.5 + 2440588 - 2451545; }
+function rightAsc(l, b) { return Math.atan2(Math.sin(l) * Math.cos(OBL) - Math.tan(b) * Math.sin(OBL), Math.cos(l)); }
+function declin(l, b) { return Math.asin(Math.sin(b) * Math.cos(OBL) + Math.cos(b) * Math.sin(OBL) * Math.sin(l)); }
+function sidereal(d) { return RAD * (280.16 + 360.9856235 * d) - LW; }
+function altitude(H, dec) { return Math.asin(Math.sin(PHI) * Math.sin(dec) + Math.cos(PHI) * Math.cos(dec) * Math.cos(H)); }
+function wrapPi(a) { a = ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI); return a - Math.PI; }
+
+function sunCoords(d) {
+  const M = RAD * (357.5291 + 0.98560028 * d);
+  const C = RAD * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+  const lon = M + C + RAD * 102.9372 + Math.PI;
+  return { lon, ra: rightAsc(lon, 0), dec: declin(lon, 0) };
+}
+// Low-precision lunar theory (Astronomical Almanac / Meeus main terms), good to a few minutes for rise, set and transit.
+function moonCoords(d) {
+  const Lp = RAD * (218.316 + 13.176396 * d), Mp = RAD * (134.963 + 13.064993 * d);
+  const F = RAD * (93.272 + 13.229350 * d), D = RAD * (297.850 + 12.190749 * d), M = RAD * (357.529 + 0.98560028 * d);
+  const lon = Lp + RAD * (6.289 * Math.sin(Mp) + 1.274 * Math.sin(2 * D - Mp) + 0.658 * Math.sin(2 * D)
+    + 0.214 * Math.sin(2 * Mp) - 0.186 * Math.sin(M) - 0.114 * Math.sin(2 * F));
+  const lat = RAD * (5.128 * Math.sin(F) + 0.280 * Math.sin(Mp + F) + 0.277 * Math.sin(Mp - F) + 0.173 * Math.sin(2 * D - F));
+  const dist = 385001 - 20905 * Math.cos(Mp) - 3699 * Math.cos(2 * D - Mp) - 2956 * Math.cos(2 * D) - 570 * Math.cos(2 * Mp);
+  return { lon, ra: rightAsc(lon, lat), dec: declin(lon, lat), dist };
+}
+function sunAlt(ms) { const d = toDays(ms), c = sunCoords(d); return altitude(sidereal(d) - c.ra, c.dec); }
+function moonState(ms) {
+  const d = toDays(ms), c = moonCoords(d), H = wrapPi(sidereal(d) - c.ra);
+  const h0 = 0.7275 * Math.asin(6378.14 / c.dist) - 0.5667 * RAD;
+  return { H, rel: altitude(H, c.dec) - h0, dec: c.dec, dist: c.dist };
+}
+function phaseAt(ms) {
+  const d = toDays(ms);
+  let e = (moonCoords(d).lon - sunCoords(d).lon) / (2 * Math.PI);
+  return ((e % 1) + 1) % 1; // 0 new, .25 first quarter, .5 full, .75 last quarter
+}
+
+function tzParts(ms) {
+  const o = {};
+  new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    .formatToParts(ms).forEach(p => { if (p.type !== "literal") o[p.type] = +p.value; });
+  return o;
+}
+function tzOffset(ms) { const p = tzParts(ms); return (Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - Math.floor(ms / 1000) * 1000) / MIN; }
+function localMidnight(y, m, d) {
+  const base = Date.UTC(y, m - 1, d);
+  const t = base - tzOffset(base + 12 * HOUR) * MIN;
+  return base - tzOffset(t) * MIN;
+}
+
+function scan(from, to) {
+  const step = 10 * MIN, ev = { rise: [], set: [], over: [], under: [], sunrise: [], sunset: [] };
+  const cross = (t0, t1, a, b) => t0 + (t1 - t0) * (-a) / (b - a);
+  let t0 = from, m0 = moonState(t0), s0 = sunAlt(t0) - SUN_H0;
+  for (let t1 = from + step; t1 <= to; t1 += step) {
+    const m1 = moonState(t1), s1 = sunAlt(t1) - SUN_H0;
+    if (m0.rel < 0 && m1.rel >= 0) ev.rise.push(cross(t0, t1, m0.rel, m1.rel));
+    if (m0.rel >= 0 && m1.rel < 0) ev.set.push(cross(t0, t1, m0.rel, m1.rel));
+    if (s0 < 0 && s1 >= 0) ev.sunrise.push(cross(t0, t1, s0, s1));
+    if (s0 >= 0 && s1 < 0) ev.sunset.push(cross(t0, t1, s0, s1));
+    if (m0.H < 0 && m1.H >= 0 && m1.H - m0.H < Math.PI) ev.over.push(cross(t0, t1, m0.H, m1.H));
+    if (m0.H > 0 && m1.H < 0 && m0.H - m1.H > Math.PI) ev.under.push(cross(t0, t1, m0.H - Math.PI, m1.H + Math.PI));
+    t0 = t1; m0 = m1; s0 = s1;
+  }
+  return ev;
+}
+
+function dayInfo(y, m, d) {
+  const start = localMidnight(y, m, d);
+  const nd = new Date(Date.UTC(y, m - 1, d + 1));
+  const end = localMidnight(nd.getUTCFullYear(), nd.getUTCMonth() + 1, nd.getUTCDate());
+  const ev = scan(start - 4 * HOUR, end + 4 * HOUR);
+  const inDay = t => t >= start && t < end;
+  const sunrise = ev.sunrise.find(inDay) || null, sunset = ev.sunset.find(inDay) || null;
+  const allSunEvents = ev.sunrise.concat(ev.sunset);
+
+  const mk = (kind, src, c) => {
+    const half = kind === "major" ? HOUR : 30 * MIN;
+    return { kind, src, c, a: c - half, b: c + half };
+  };
+  const all = [
+    ...ev.over.map(t => mk("major", "Moon overhead", t)),
+    ...ev.under.map(t => mk("major", "Moon underfoot", t)),
+    ...ev.rise.map(t => mk("minor", "Moonrise", t)),
+    ...ev.set.map(t => mk("minor", "Moonset", t)),
+  ].sort((p, q) => p.c - q.c);
+  all.forEach(w => {
+    if (sunrise && w.a < sunrise + HOUR && w.b > sunrise - HOUR) w.sun = "sunrise";
+    else if (sunset && w.a < sunset + HOUR && w.b > sunset - HOUR) w.sun = "sunset";
+  });
+  const windows = all.filter(w => inDay(w.c));
+
+  const noon = (start + end) / 2, ms = moonState(noon);
+  const p0 = phaseAt(start), p1 = phaseAt(end), pn = phaseAt(noon);
+  let event = null;
+  if (p1 < p0) event = "New moon";
+  else if (p0 < 0.25 && p1 >= 0.25) event = "First quarter";
+  else if (p0 < 0.5 && p1 >= 0.5) event = "Full moon";
+  else if (p0 < 0.75 && p1 >= 0.75) event = "Last quarter";
+  const name = event || (pn < 0.25 ? "Waxing crescent" : pn < 0.5 ? "Waxing gibbous" : pn < 0.75 ? "Waning gibbous" : "Waning crescent");
+  const lit = (1 - Math.cos(2 * Math.PI * pn)) / 2;
+  const toNew = Math.min(pn, 1 - pn) * SYNODIC, toFull = Math.abs(pn - 0.5) * SYNODIC;
+  const near = Math.min(toNew, toFull), nearType = toNew <= toFull ? "new" : "full";
+
+  let score = near <= 1 ? 2 : near <= 2.5 ? 1.5 : near <= 4 ? 1 : near <= 6 ? 0.5 : 0;
+  let sunBonus = 0;
+  windows.forEach(w => { if (w.sun) sunBonus += w.kind === "major" ? 1 : 0.5; });
+  score += Math.min(1.5, sunBonus);
+  if (ms.dist < 362000) score += 1; else if (ms.dist < 370000) score += 0.5;
+  const stars = Math.max(1, Math.min(5, 1 + Math.round(score)));
+
+  const decDeg = ms.dec / RAD;
+  const diurnal = Math.min(1, Math.abs(decDeg) / 27);
+  const spring = (1 + Math.cos(4 * Math.PI * pn)) / 2;
+  const tide = Math.min(1, (0.75 * diurnal + 0.25 * spring) * Math.pow(385000 / ms.dist, 3));
+
+  // Activity model: bell curves at each window center, smaller bumps at sunrise and sunset.
+  const curve = [];
+  for (let i = 0; i <= 144; i++) {
+    const t = start + (i / 144) * (end - start);
+    let v = 6;
+    all.forEach(w => {
+      const dh = (t - w.c) / HOUR;
+      v += w.kind === "major" ? 78 * Math.exp(-((dh / 0.75) ** 2)) : 46 * Math.exp(-((dh / 0.42) ** 2));
+    });
+    allSunEvents.forEach(s => { const dh = (t - s) / HOUR; v += 22 * Math.exp(-((dh / 0.6) ** 2)); });
+    v *= 0.76 + 0.06 * stars;
+    curve.push([(i / 144) * 24, Math.min(100, v)]);
+  }
+
+  return {
+    y, m, d, start, end, sunrise, sunset,
+    moonrise: ev.rise.find(inDay) || null, moonset: ev.set.find(inDay) || null,
+    windows, all, phase: pn, name, event, lit, near, nearType, score, stars,
+    decDeg, dist: ms.dist, tide, curve,
+  };
+}
+// ASTRO-END
+
+// NOAA tide prediction stations, Texas coast. IDs from NOAA CO-OPS.
+const STATIONS = [
+  { id: "8770613", name: "Morgans Point, Barbours Cut", lat: 29.6817, lng: -94.9850 },
+  { id: "8770733", name: "Lynchburg Landing, San Jacinto River", lat: 29.7650, lng: -95.0783 },
+  { id: "8770777", name: "Manchester, Houston Ship Channel", lat: 29.7263, lng: -95.2658 },
+  { id: "8770933", name: "Clear Lake", lat: 29.5633, lng: -95.0667 },
+  { id: "8771013", name: "Eagle Point", lat: 29.4800, lng: -94.9183 },
+  { id: "8771262", name: "Texas City, Galveston Bay", lat: 29.3833, lng: -94.8833 },
+  { id: "8770559", name: "Round Point, Trinity Bay", lat: 29.7133, lng: -94.6900 },
+  { id: "8770557", name: "Point Barrow, Trinity Bay", lat: 29.7400, lng: -94.8317 },
+  { id: "8770625", name: "Umbrella Point, Trinity Bay", lat: 29.6800, lng: -94.8683 },
+  { id: "8770931", name: "Smith Point", lat: 29.5450, lng: -94.7783 },
+  { id: "8771328", name: "Port Bolivar", lat: 29.3650, lng: -94.7800 },
+  { id: "8771341", name: "Galveston Bay Entrance, North Jetty", lat: 29.3573, lng: -94.7248 },
+  { id: "8771416", name: "Galveston Bay Entrance, South Jetty", lat: 29.3404, lng: -94.7068 },
+  { id: "8770971", name: "Rollover Pass", lat: 29.5150, lng: -94.5133 },
+  { id: "8770808", name: "High Island, ICWW", lat: 29.5942, lng: -94.3903 },
+  { id: "8771450", name: "Galveston Pier 21, Galveston Channel", lat: 29.3100, lng: -94.7933 },
+  { id: "8771510", name: "Galveston Pleasure Pier", lat: 29.2853, lng: -94.7894 },
+  { id: "8771486", name: "Galveston Railroad Bridge", lat: 29.3017, lng: -94.8967 },
+  { id: "8771722", name: "Jamaica Beach, West Bay", lat: 29.2000, lng: -94.9850 },
+  { id: "8771801", name: "Alligator Point, West Bay", lat: 29.1667, lng: -95.1250 },
+  { id: "8771972", name: "San Luis Pass", lat: 29.0806, lng: -95.1306 },
+  { id: "8772132", name: "Christmas Bay", lat: 29.0417, lng: -95.1750 },
+  { id: "8772479", name: "Freeport Entrance Jetty", lat: 28.9353, lng: -95.2940 },
+  { id: "8772440", name: "Freeport Harbor", lat: 28.9483, lng: -95.3083 },
+  { id: "8772447", name: "USCG Freeport", lat: 28.9433, lng: -95.3025 },
+  { id: "8772985", name: "Sargent, ICWW", lat: 28.7714, lng: -95.6170 },
+  { id: "8770822", name: "Texas Point, Sabine Pass", lat: 29.6781, lng: -93.8369 },
+  { id: "8770570", name: "Sabine Pass North", lat: 29.7284, lng: -93.8701 },
+  { id: "8770475", name: "Port Arthur", lat: 29.8667, lng: -93.9300 },
+  { id: "8773701", name: "Port O'Connor, Matagorda Bay", lat: 28.4517, lng: -96.3883 },
+  { id: "8773037", name: "Seadrift", lat: 28.4069, lng: -96.7117 },
+  { id: "8773259", name: "Port Lavaca", lat: 28.6400, lng: -96.6094 },
+  { id: "8774770", name: "Rockport", lat: 28.0217, lng: -97.0467 },
+  { id: "8775237", name: "Port Aransas", lat: 27.8397, lng: -97.0725 },
+  { id: "8775792", name: "Packery Channel", lat: 27.6333, lng: -97.2367 },
+  { id: "8775870", name: "Corpus Christi, Bob Hall Pier", lat: 27.5800, lng: -97.2167 },
+  { id: "8779770", name: "Port Isabel", lat: 26.0600, lng: -97.2150 },
+  { id: "8779750", name: "Padre Island (south end)", lat: 26.0683, lng: -97.1567 },
+];
+
+const SPOTS = [
+  { id: "sylvan", name: "Sylvan Beach", area: "Upper Galveston Bay", town: "La Porte", lat: 29.6539, lng: -95.0098, st: "8770613", alias: "sylvan beach park pier" },
+  { id: "morgans", name: "Morgans Point", area: "Upper Galveston Bay", town: "La Porte", lat: 29.6770, lng: -94.9860, st: "8770613", alias: "barbours cut" },
+  { id: "baytown", name: "Bayland Park", area: "Upper Galveston Bay", town: "Baytown", lat: 29.7370, lng: -94.9930, st: "8770613", alias: "baytown houston point" },
+  { id: "sanjac", name: "San Jacinto Battleground", area: "Upper Galveston Bay", town: "La Porte", lat: 29.7540, lng: -95.0880, st: "8770733", alias: "lynchburg ferry battleship" },
+  { id: "pinegully", name: "Pine Gully Park", area: "Upper Galveston Bay", town: "Seabrook", lat: 29.5730, lng: -95.0130, st: "8770933", alias: "seabrook pier" },
+  { id: "kemah", name: "Kemah Boardwalk", area: "Upper Galveston Bay", town: "Kemah", lat: 29.5449, lng: -95.0190, st: "8770933", alias: "clear creek channel" },
+  { id: "clearlake", name: "Clear Lake", area: "Upper Galveston Bay", town: "League City", lat: 29.5580, lng: -95.0750, st: "8770933", alias: "nasa clear lake shores" },
+  { id: "aprilfool", name: "April Fool Point", area: "Upper Galveston Bay", town: "San Leon", lat: 29.4915, lng: -94.9240, st: "8771013", alias: "san leon eagle point" },
+  { id: "dickinson", name: "Dickinson Bay", area: "Upper Galveston Bay", town: "Dickinson", lat: 29.4550, lng: -94.9600, st: "8771013", alias: "" },
+  { id: "tcdike", name: "Texas City Dike", area: "Lower Galveston Bay", town: "Texas City", lat: 29.3680, lng: -94.8550, st: "8771262", alias: "dike" },
+  { id: "anahuac", name: "Fort Anahuac Park", area: "Trinity Bay", town: "Anahuac", lat: 29.7580, lng: -94.6860, st: "8770559", alias: "trinity river" },
+  { id: "beachcity", name: "Beach City shoreline", area: "Trinity Bay", town: "Beach City", lat: 29.6630, lng: -94.8880, st: "8770625", alias: "umbrella point" },
+  { id: "smithpt", name: "Smith Point", area: "Trinity Bay", town: "Smith Point", lat: 29.5480, lng: -94.7650, st: "8770931", alias: "hawkins camp east bay" },
+  { id: "bolivarflats", name: "Bolivar Flats", area: "East Bay & Bolivar", town: "Port Bolivar", lat: 29.3730, lng: -94.7300, st: "8771341", alias: "north jetty" },
+  { id: "portbolivar", name: "Bolivar ferry landing", area: "East Bay & Bolivar", town: "Port Bolivar", lat: 29.3660, lng: -94.7750, st: "8771328", alias: "port bolivar" },
+  { id: "crystal", name: "Crystal Beach", area: "East Bay & Bolivar", town: "Crystal Beach", lat: 29.4640, lng: -94.6300, st: "8770971", alias: "bolivar surf" },
+  { id: "rollover", name: "Rollover Pass", area: "East Bay & Bolivar", town: "Gilchrist", lat: 29.5080, lng: -94.5000, st: "8770971", alias: "gilchrist east bay" },
+  { id: "highisland", name: "High Island beach", area: "East Bay & Bolivar", town: "High Island", lat: 29.5650, lng: -94.3900, st: "8770808", alias: "" },
+  { id: "northjetty", name: "North Jetty", area: "Galveston Island", town: "Bolivar side", lat: 29.3600, lng: -94.7200, st: "8771341", alias: "jetties jetty" },
+  { id: "southjetty", name: "South Jetty & East Beach", area: "Galveston Island", town: "Galveston", lat: 29.3300, lng: -94.7200, st: "8771416", alias: "jetties jetty east end" },
+  { id: "seawall", name: "Seawall & 61st St piers", area: "Galveston Island", town: "Galveston", lat: 29.2740, lng: -94.8200, st: "8771510", alias: "pleasure pier surf rocks groins" },
+  { id: "pier21", name: "Galveston Island", area: "Galveston Island", town: "Pier 21 & harbor", lat: 29.3100, lng: -94.7933, st: "8771450", alias: "galveston channel harbor pier 21" },
+  { id: "seawolf", name: "Seawolf Park", area: "Galveston Island", town: "Pelican Island", lat: 29.3370, lng: -94.7780, st: "8771450", alias: "pelican island" },
+  { id: "causeway", name: "Galveston Causeway", area: "West Bay", town: "Tiki Island", lat: 29.2960, lng: -94.9050, st: "8771486", alias: "tiki island railroad bridge" },
+  { id: "jamaica", name: "Jamaica Beach", area: "West Bay", town: "Galveston Island", lat: 29.1900, lng: -94.9800, st: "8771722", alias: "west galveston" },
+  { id: "chocolate", name: "Chocolate Bay", area: "West Bay", town: "Alligator Point", lat: 29.1700, lng: -95.1200, st: "8771801", alias: "alligator point" },
+  { id: "sanluis", name: "San Luis Pass", area: "West Bay", town: "Treasure Island", lat: 29.0810, lng: -95.1200, st: "8771972", alias: "" },
+  { id: "christmas", name: "Christmas Bay", area: "Brazoria coast", town: "Surfside", lat: 29.0400, lng: -95.1800, st: "8772132", alias: "drum bay" },
+  { id: "surfside", name: "Surfside jetty", area: "Brazoria coast", town: "Surfside Beach", lat: 28.9400, lng: -95.2900, st: "8772479", alias: "freeport jetties" },
+  { id: "quintana", name: "Quintana Beach", area: "Brazoria coast", town: "Freeport", lat: 28.9200, lng: -95.3100, st: "8772479", alias: "" },
+  { id: "sargent", name: "Sargent", area: "Brazoria coast", town: "East Matagorda Bay", lat: 28.7700, lng: -95.6200, st: "8772985", alias: "east matagorda" },
+  { id: "sabinepass", name: "Sabine Pass jetties", area: "Sabine", town: "Texas Point", lat: 29.6800, lng: -93.8400, st: "8770822", alias: "sea rim" },
+  { id: "pleasureisl", name: "Pleasure Island", area: "Sabine", town: "Port Arthur", lat: 29.8500, lng: -93.9000, st: "8770475", alias: "sabine lake" },
+  { id: "poc", name: "Port O'Connor", area: "Middle coast", town: "Matagorda Bay", lat: 28.4500, lng: -96.3900, st: "8773701", alias: "espiritu santo" },
+  { id: "seadrift", name: "Seadrift", area: "Middle coast", town: "San Antonio Bay", lat: 28.4100, lng: -96.7100, st: "8773037", alias: "" },
+  { id: "portlavaca", name: "Port Lavaca", area: "Middle coast", town: "Lavaca Bay", lat: 28.6400, lng: -96.6100, st: "8773259", alias: "" },
+  { id: "rockport", name: "Rockport", area: "Middle coast", town: "Aransas Bay", lat: 28.0200, lng: -97.0500, st: "8774770", alias: "fulton" },
+  { id: "portA", name: "Port Aransas", area: "Middle coast", town: "Mustang Island", lat: 27.8300, lng: -97.0600, st: "8775237", alias: "port a jetties" },
+  { id: "bobhall", name: "Bob Hall Pier", area: "Middle coast", town: "Corpus Christi", lat: 27.5800, lng: -97.2200, st: "8775870", alias: "padre island national seashore" },
+  { id: "packery", name: "Packery Channel", area: "Middle coast", town: "Corpus Christi", lat: 27.6300, lng: -97.2400, st: "8775792", alias: "laguna madre" },
+  { id: "spi", name: "South Padre Island", area: "Lower coast", town: "Brazos Santiago Pass", lat: 26.0900, lng: -97.1600, st: "8779750", alias: "jetties" },
+  { id: "portisabel", name: "Port Isabel", area: "Lower coast", town: "Laguna Madre", lat: 26.0600, lng: -97.2150, st: "8779770", alias: "" },
+];
+
+const WORDS = ["Slow", "Fair", "Good", "Very good", "Best"];
+const fmtTime = new Intl.DateTimeFormat("en-US", { timeZone: TZ, hour: "numeric", minute: "2-digit" });
+const fmtDay = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short", month: "short", day: "numeric" });
+const fmtDow = new Intl.DateTimeFormat("en-US", { timeZone: "UTC", weekday: "short" });
+const fmtClock = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const T = ms => fmtTime.format(ms);
+function range(a, b) {
+  const A = T(a), B = T(b);
+  return A.slice(-2) === B.slice(-2) ? A.slice(0, -3) + "–" + B : A + "–" + B;
+}
+const ymdOf = ms => { const p = tzParts(ms); return [p.year, p.month, p.day]; };
+const addDays = ([y, m, d], n) => { const t = new Date(Date.UTC(y, m - 1, d + n)); return [t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate()]; };
+const keyOf = ([y, m, d]) => `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+const same = (a, b) => keyOf(a) === keyOf(b);
+const dayLabel = ymd => fmtDay.format(Date.UTC(ymd[0], ymd[1] - 1, ymd[2]));
+const diffDays = (a, b) => Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / DAY);
+const startOf = ymd => localMidnight(...ymd);
+function km(aLat, aLng, bLat, bLng) {
+  const dLat = (bLat - aLat) * RAD, dLng = (bLng - aLng) * RAD;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(aLat * RAD) * Math.cos(bLat * RAD) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
+}
+const stationById = id => STATIONS.find(s => s.id === id);
+const shortName = s => s.name.split(",")[0];
+function stationsByDistance(lat, lng) {
+  return STATIONS.map(s => ({ ...s, km: km(lat, lng, s.lat, s.lng) })).sort((a, b) => a.km - b.km);
+}
+const distText = k => k < 1 ? "under 1 km" : k < 10 ? `${k.toFixed(1)} km` : `${Math.round(k)} km`;
+const ft = v => `${v.toFixed(1)} ft`;
+function ago(t) {
+  const m = Math.round((Date.now() - t) / MIN);
+  if (m < 2) return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  return h < 48 ? `${h} hr ago` : `${Math.round(h / 24)} days ago`;
+}
+
+// ---------- Live data: NOAA CO-OPS + National Weather Service ----------
+const NOAA_API = "https://api.tidesandcurrents.noaa.gov/api/prod/datagetter";
+const pad2 = n => String(n).padStart(2, "0");
+const gmtStamp = ms => { const d = new Date(ms); return `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())} ${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`; };
+const parseGMT = t => { const [a, b = "00:00"] = t.split(" "); const [y, m, d] = a.split("-").map(Number); const [h, mi] = b.split(":").map(Number); return Date.UTC(y, m - 1, d, h, mi); };
+function noaaUrl(p) {
+  const all = { ...p, units: "english", time_zone: "gmt", format: "json", application: "SolunarTidePlaybook" };
+  return NOAA_API + "?" + Object.entries(all).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+}
+class NetError extends Error {}
+const memo = new Map();
+function fetchJSON(url, ttl) {
+  const hit = memo.get(url);
+  if (hit && Date.now() - hit.at < ttl) return hit.p;
+  const p = (async () => {
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 15000);
+    let r;
+    try { r = await fetch(url, { signal: ctl.signal }); }
+    catch (e) { throw new NetError(e.message || "Network error"); }
+    finally { clearTimeout(timer); }
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.json();
+  })();
+  memo.set(url, { at: Date.now(), p });
+  p.catch(() => memo.delete(url));
+  return p;
+}
+
+async function tideExtremes(stationId, from, to) {
+  const j = await fetchJSON(noaaUrl({ product: "predictions", interval: "hilo", datum: "MLLW", station: stationId, begin_date: gmtStamp(from), end_date: gmtStamp(to) }), 6 * HOUR);
+  if (!j || !Array.isArray(j.predictions)) throw new Error((j && j.error && j.error.message) || "No tide predictions");
+  return j.predictions.map(p => ({ t: parseGMT(p.t), v: +p.v, type: String(p.type).startsWith("H") ? "H" : "L" }))
+    .filter(e => isFinite(e.v)).sort((a, b) => a.t - b.t);
+}
+// NOAA draws curves between highs and lows the same way: a half cosine between each pair.
+function tideAt(ex, t) {
+  for (let i = 0; i < ex.length - 1; i++) {
+    const a = ex[i], b = ex[i + 1];
+    if (t >= a.t && t <= b.t) { const f = (t - a.t) / (b.t - a.t); return (a.v + b.v) / 2 + (a.v - b.v) / 2 * Math.cos(Math.PI * f); }
+  }
+  return null;
+}
+function dayRange(ex, start, end) {
+  const win = ex.filter(e => e.t >= start - 3 * HOUR && e.t < end + 3 * HOUR);
+  const hi = win.filter(e => e.type === "H"), lo = win.filter(e => e.type === "L");
+  if (!hi.length || !lo.length) return null;
+  return Math.max(...hi.map(e => e.v)) - Math.min(...lo.map(e => e.v));
+}
+
+async function latestReading(product, stations) {
+  for (const s of stations) {
+    const params = { product, station: s.id, date: "latest" };
+    if (product === "water_level") params.datum = "MLLW";
+    try {
+      const j = await fetchJSON(noaaUrl(params), 5 * MIN);
+      const d = j && Array.isArray(j.data) ? j.data[j.data.length - 1] : null;
+      const val = d ? (product === "wind" ? d.s : d.v) : "";
+      if (d && val !== "" && isFinite(+val)) {
+        const t = parseGMT(d.t);
+        if (Date.now() - t < 12 * HOUR) return { station: s, d, t };
+      }
+    } catch (e) { if (e instanceof NetError) throw e; }
+  }
+  return null;
+}
+
+const parseWindMph = s => { const n = String(s || "").match(/\d+/g); return n ? n.map(Number) : null; };
+async function nwsHourly(lat, lng) {
+  const pt = await fetchJSON(`https://api.weather.gov/points/${lat.toFixed(4)},${lng.toFixed(4)}`, 24 * HOUR);
+  const url = pt && pt.properties && pt.properties.forecastHourly;
+  if (!url) throw new Error("No forecast for this point");
+  const f = await fetchJSON(url, 30 * MIN);
+  const periods = (f && f.properties && f.properties.periods) || [];
+  return periods.map(p => {
+    const w = parseWindMph(p.windSpeed);
+    return {
+      t: Date.parse(p.startTime), end: Date.parse(p.endTime), temp: p.temperature,
+      lo: w ? Math.min(...w) : null, hi: w ? Math.max(...w) : null, dir: p.windDirection || "",
+      short: p.shortForecast || "", rain: p.probabilityOfPrecipitation && p.probabilityOfPrecipitation.value != null ? p.probabilityOfPrecipitation.value : null,
+    };
+  }).filter(p => isFinite(p.t));
+}
+
+// ---------- State ----------
+const DEFAULT_SPOT = SPOTS.find(s => s.id === "pier21");
+const state = {
+  today: ymdOf(Date.now()), sel: null, stripStart: null, spot: null, station: null,
+  tides: { key: "", status: "idle", ex: null },
+  live: { key: "", status: "idle" },
+  fc: { key: "", status: "idle", periods: null },
+};
+function customSpot(lat, lng) {
+  const near = stationsByDistance(lat, lng)[0];
+  return { id: null, custom: true, name: "Custom spot", area: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, town: "", lat, lng, st: near.id };
+}
+function spotFromSaved() {
+  try {
+    const raw = JSON.parse(localStorage.getItem("stp-spot") || "null");
+    if (!raw) return null;
+    let spot = raw.id ? SPOTS.find(s => s.id === raw.id) : null;
+    if (!spot && typeof raw.lat === "number" && typeof raw.lng === "number") spot = customSpot(raw.lat, raw.lng);
+    if (spot && raw.station && stationById(raw.station)) return { spot, station: raw.station };
+    return spot ? { spot, station: spot.st } : null;
+  } catch (e) { return null; }
+}
+function saveSpot() {
+  try {
+    const s = state.spot;
+    localStorage.setItem("stp-spot", JSON.stringify(s.custom ? { lat: s.lat, lng: s.lng, station: state.station } : { id: s.id, station: state.station }));
+  } catch (e) {}
+}
+const cache = new Map();
+function info(ymd) {
+  const k = `${state.spot.lat},${state.spot.lng}|${keyOf(ymd)}`;
+  if (!cache.has(k)) cache.set(k, dayInfo(...ymd));
+  return cache.get(k);
+}
+function setSpot(spot, station) {
+  state.spot = spot;
+  state.station = station || spot.st;
+  setLocation(spot.lat, spot.lng);
+  cache.clear();
+}
+
+// Pull "lat, lng" out of typed coordinates or a Google Maps link.
+function parseCoords(text) {
+  const s = text.trim();
+  const at = s.match(/@(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/) || s.match(/[?&](?:q|query|ll)=(-?\d{1,2}\.\d+),\s*(-?\d{1,3}\.\d+)/);
+  let lat, lng;
+  if (at) { lat = +at[1]; lng = +at[2]; }
+  else {
+    const m = s.match(/^(-?\d{1,2}(?:\.\d+)?)\s*°?\s*([NS])?\s*[, ]\s*(-?\d{1,3}(?:\.\d+)?)\s*°?\s*([EW])?$/i);
+    if (!m) return null;
+    lat = +m[1]; lng = +m[3];
+    if (m[2] && /s/i.test(m[2])) lat = -Math.abs(lat);
+    if (m[4] && /w/i.test(m[4])) lng = -Math.abs(lng);
+    else if (!m[4] && lng >= 93 && lng <= 107) lng = -lng; // Texas longitudes typed without the minus sign
+  }
+  if (!isFinite(lat) || !isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng };
+}
+
+// ---------- Small render helpers ----------
+function starsHTML(n) { let s = ""; for (let i = 1; i <= 5; i++) s += `<span class="${i <= n ? "on" : ""}">★</span>`; return `<span class="stars" aria-hidden="true">${s}</span>`; }
+function moonSVG(p, size) {
+  const r = 10, c = 12, k = Math.cos(2 * Math.PI * p), lit = (1 - k) / 2, wax = p < 0.5;
+  let path = "";
+  if (lit > 0.01) {
+    const limb = wax ? 1 : 0, term = wax ? (k > 0 ? 0 : 1) : (k > 0 ? 1 : 0);
+    path = `<path class="m-lit" d="M${c} ${c - r}A${r} ${r} 0 0 ${limb} ${c} ${c + r}A${(Math.abs(k) * r).toFixed(2)} ${r} 0 0 ${term} ${c} ${c - r}Z"/>`;
+  }
+  return `<svg class="moon" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true"><circle class="m-dark" cx="12" cy="12" r="10"/>${path}</svg>`;
+}
+function estWord(v) { return v >= 0.62 ? "Strong" : v >= 0.38 ? "Moderate" : "Weak"; }
+function stripRanges() {
+  const ex = state.tides.status === "ok" ? state.tides.ex : null;
+  const out = [];
+  for (let i = 0; i < 14; i++) {
+    const ymd = addDays(state.stripStart, i), I = info(ymd);
+    out.push({ ymd, I, range: ex ? dayRange(ex, I.start, I.end) : null });
+  }
+  return out;
+}
+// Strength from real ranges compares each day with the two-week average at that station.
+function tideStrength(ymd) {
+  const rows = stripRanges(), row = rows.find(r => same(r.ymd, ymd));
+  const vals = rows.map(r => r.range).filter(v => v != null);
+  if (row && row.range != null && vals.length >= 5) {
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const ratio = row.range / avg;
+    return { real: true, word: ratio >= 1.15 ? "Strong" : ratio <= 0.75 ? "Weak" : "Moderate", range: row.range };
+  }
+  return { real: false, word: estWord(info(ymd).tide), range: null };
+}
+function forecastAt(t) {
+  const P = state.fc.status === "ok" ? state.fc.periods : null;
+  return P ? P.find(p => t >= p.t && t < p.end) || null : null;
+}
+const windTxt = p => p.hi == null ? "" : p.lo !== p.hi ? `${p.dir} ${p.lo}–${p.hi} mph` : `${p.dir} ${p.hi} mph`;
+
+// ---------- Spot ----------
+function renderSpot() {
+  const s = state.spot, st = stationById(state.station);
+  const d = km(s.lat, s.lng, st.lat, st.lng);
+  $("spotName").textContent = s.custom ? "Custom spot" : s.name;
+  const where = s.custom ? s.area : [s.town, s.area].filter(Boolean).join(" · ");
+  const far = d > 40 ? ` <span class="warn">That station is ${distText(d)} away, so tide times may not match.</span>` : "";
+  $("spotSub").innerHTML = `${esc(where)}<br>Tides from <b>${esc(st.name)}</b>, ${distText(d)} away.${far}`;
+  const outside = s.lat < 25.5 || s.lat > 30.5 || s.lng < -98 || s.lng > -93.5;
+  $("footLoc").textContent = `All times are Central Time, figured for ${s.custom ? "your coordinates" : s.name} (${s.lat.toFixed(2)}° N, ${Math.abs(s.lng).toFixed(2)}° W).`
+    + (outside ? " This spot is off the Texas coast, so check that Central Time fits." : " Solunar times shift only a few minutes along the coast. Tide times shift much more.");
+}
+function renderResults() {
+  const q = $("spotSearch").value;
+  const coords = parseCoords(q);
+  let html = "";
+  if (coords) {
+    const near = stationsByDistance(coords.lat, coords.lng)[0];
+    html += `<li class="coords"><button type="button" data-lat="${coords.lat}" data-lng="${coords.lng}"><span class="rn">Use ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}</span><span class="rs">Nearest tide station: ${esc(near.name)}, ${distText(near.km)} away</span></button></li>`;
+  }
+  const words = q.toLowerCase().replace(/[^a-z0-9' ]/g, " ").split(/\s+/).filter(Boolean);
+  const hits = coords ? [] : SPOTS.filter(s => {
+    const hay = `${s.name} ${s.area} ${s.town} ${s.alias} ${stationById(s.st).name}`.toLowerCase();
+    return words.every(w => hay.includes(w));
+  });
+  let area = "";
+  hits.forEach(s => {
+    if (s.area !== area) { area = s.area; html += `<li class="grp">${esc(area)}</li>`; }
+    const cur = !state.spot.custom && state.spot.id === s.id;
+    html += `<li><button type="button" data-id="${s.id}" aria-current="${cur}"><span class="rn">${esc(s.name)}</span><span class="rs">${esc(s.town)} · tides from ${esc(stationById(s.st).name)}</span></button></li>`;
+  });
+  if (!coords && !hits.length) html = `<li class="none">No spot matches “${esc(q.trim())}”. Paste coordinates instead: long-press the spot in Google Maps and copy the numbers.</li>`;
+  $("spotResults").innerHTML = html;
+}
+function openSpotPanel(open) {
+  $("spotPanel").hidden = !open;
+  $("spotToggle").setAttribute("aria-expanded", String(open));
+  $("spotToggle").textContent = open ? "Close" : "Change spot";
+  if (open) { $("spotSearch").value = ""; renderResults(); $("spotSearch").focus(); }
+}
+function chooseSpot(spot) {
+  setSpot(spot, spot.st);
+  saveSpot();
+  openSpotPanel(false);
+  renderAll();
+  $("spotToggle").focus();
+}
+
+// ---------- Right now ----------
+function tile(id, value, sub, hot) {
+  const el = $(id);
+  el.classList.toggle("wait", value == null);
+  el.querySelector(".tv").innerHTML = value == null ? "--" : value;
+  const ts = el.querySelector(".ts");
+  ts.textContent = sub || "";
+  ts.classList.toggle("hot", !!hot);
+}
+function renderLive() {
+  const L = state.live;
+  if (L.status === "loading") { $("liveSrc").textContent = "Checking NOAA gauges…"; return; }
+  if (L.status === "offline") {
+    $("liveSrc").textContent = "Can't reach NOAA right now. Moon windows still work offline.";
+    ["tWind", "tLevel", "tTemp"].forEach(id => tile(id, null, "No connection"));
+    return;
+  }
+  const times = [L.wind, L.level, L.temp].filter(Boolean).map(r => r.t);
+  $("liveSrc").textContent = times.length ? `NOAA gauges · updated ${ago(Math.max(...times))}` : "No NOAA gauge nearby is reporting.";
+  if (L.wind) {
+    const mph = +L.wind.d.s * 1.15078, g = +L.wind.d.g * 1.15078;
+    const dir = L.wind.d.dr || "";
+    tile("tWind", `${Math.round(mph)}<small>mph</small>`, `from ${dir}${isFinite(g) && g > mph ? `, gusts ${Math.round(g)}` : ""} · ${shortName(L.wind.station)}`, mph >= 18);
+  } else tile("tWind", null, "No wind gauge nearby");
+  if (L.level) {
+    const obs = +L.level.d.v, pred = L.levelPred;
+    if (pred != null) {
+      const diff = obs - pred, abs = Math.abs(diff);
+      const sub = abs < 0.15 ? `on forecast · ${shortName(L.level.station)}` : `${abs.toFixed(1)} ft ${diff < 0 ? "below" : "above"} forecast · ${shortName(L.level.station)}`;
+      tile("tLevel", `${obs.toFixed(1)}<small>ft</small>`, sub, abs >= 0.5);
+    } else tile("tLevel", `${obs.toFixed(1)}<small>ft</small>`, shortName(L.level.station));
+  } else tile("tLevel", null, "No water gauge nearby");
+  if (L.temp) tile("tTemp", `${Math.round(+L.temp.d.v)}<small>°F</small>`, shortName(L.temp.station));
+  else tile("tTemp", null, "No temp gauge nearby");
+}
+async function loadLive(force) {
+  const key = `${state.spot.lat},${state.spot.lng}|${state.station}`;
+  if (!force && state.live.key === key && state.live.status !== "idle") return;
+  if (force) for (const k of memo.keys()) if (k.includes("date=latest")) memo.delete(k);
+  const tok = (state.live = { key, status: "loading" });
+  renderLive();
+  const sel = stationById(state.station);
+  const list = [sel, ...stationsByDistance(state.spot.lat, state.spot.lng).filter(s => s.id !== sel.id && s.km < 60)].slice(0, 6);
+  try {
+    const [wind, level, temp] = await Promise.all([
+      latestReading("wind", list), latestReading("water_level", list), latestReading("water_temperature", list),
+    ]);
+    let levelPred = null;
+    if (level) {
+      try { const ex = await tideExtremes(level.station.id, level.t - DAY, level.t + DAY); levelPred = tideAt(ex, level.t); } catch (e) {}
+    }
+    if (state.live !== tok) return;
+    state.live = { key, status: "ok", wind, level, temp, levelPred };
+  } catch (e) {
+    if (state.live !== tok) return;
+    state.live = { key, status: "offline" };
+  }
+  renderLive(); renderNotes();
+}
+
+// ---------- Tides ----------
+async function loadTides() {
+  const key = `${state.station}|${keyOf(state.stripStart)}`;
+  if (state.tides.key === key && state.tides.status !== "idle") return;
+  const tok = (state.tides = { key, status: "loading", ex: null });
+  renderTides();
+  const from = startOf(state.stripStart) - DAY, to = startOf(addDays(state.stripStart, 15));
+  try {
+    const ex = await tideExtremes(state.station, from, to);
+    if (state.tides !== tok) return;
+    state.tides = { key, status: ex.length ? "ok" : "error", ex };
+  } catch (e) {
+    if (state.tides !== tok) return;
+    state.tides = { key, status: e instanceof NetError ? "offline" : "error", ex: null, msg: e.message };
+  }
+  renderTides(); renderNotes();
+}
+function renderTideChart(I, ex) {
+  const svg = $("tideChart");
+  const L = 6, R = 354, TOP = 16, B = 116;
+  const X = h => L + (Math.max(0, Math.min(24, h)) / 24) * (R - L);
+  const hrs = t => ((t - I.start) / (I.end - I.start)) * 24;
+  if (!ex) {
+    const msg = state.tides.status === "loading" ? "Loading NOAA tide times…" : "Tide times aren't available right now";
+    svg.innerHTML = `<rect class="c-rail" x="${L}" y="${TOP}" width="${R - L}" height="${B - TOP}" rx="8"/><text class="c-msg" x="180" y="${(TOP + B) / 2 + 4}" text-anchor="middle">${msg}</text>`;
+    return;
+  }
+  const pts = [];
+  for (let i = 0; i <= 144; i++) { const t = I.start + (i / 144) * (I.end - I.start); const v = tideAt(ex, t); if (v != null) pts.push([hrs(t), v]); }
+  if (pts.length < 2) { svg.innerHTML = `<text class="c-msg" x="180" y="70" text-anchor="middle">No tide times for this day</text>`; return; }
+  const vs = pts.map(p => p[1]);
+  let lo = Math.min(...vs), hi = Math.max(...vs);
+  const padv = Math.max(0.2, (hi - lo) * 0.15); lo -= padv; hi += padv;
+  const Y = v => B - ((v - lo) / (hi - lo)) * (B - TOP);
+  let s = "";
+  if (I.sunrise) s += `<rect class="c-night" x="${L}" y="${TOP - 6}" width="${(X(hrs(I.sunrise)) - L).toFixed(1)}" height="${B - TOP + 6}"/>`;
+  if (I.sunset) s += `<rect class="c-night" x="${X(hrs(I.sunset)).toFixed(1)}" y="${TOP - 6}" width="${(R - X(hrs(I.sunset))).toFixed(1)}" height="${B - TOP + 6}"/>`;
+  [6, 12, 18].forEach(h => { s += `<line class="c-grid" x1="${X(h)}" x2="${X(h)}" y1="${TOP - 6}" y2="${B}"/>`; });
+  const d = pts.map(([h, v]) => `${X(h).toFixed(1)} ${Y(v).toFixed(1)}`);
+  s += `<path d="M${X(pts[0][0]).toFixed(1)} ${B}L${d.join("L")}L${X(pts[pts.length - 1][0]).toFixed(1)} ${B}Z" style="fill:var(--water-soft)"/>`;
+  s += `<path class="c-tline" d="M${d.join("L")}"/>`;
+  ex.filter(e => e.t >= I.start && e.t < I.end).forEach(e => {
+    const x = X(hrs(e.t)), y = Y(e.v);
+    const ty = e.type === "H" ? y - 8 : y + 16;
+    const anchor = x < 24 ? "start" : x > 336 ? "end" : "middle";
+    s += `<circle class="c-tdot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4"/><text class="c-tval" x="${x.toFixed(1)}" y="${Math.max(10, Math.min(B + 14, ty)).toFixed(1)}" text-anchor="${anchor}">${e.v.toFixed(1)}</text>`;
+  });
+  ["12a", "6a", "12p", "6p", "12a"].forEach((t, i) => {
+    const anchor = i === 0 ? "start" : i === 4 ? "end" : "middle";
+    s += `<text class="c-axis" x="${X(i * 6)}" y="144" text-anchor="${anchor}">${t}</text>`;
+  });
+  if (same(state.sel, state.today)) {
+    const h = hrs(Date.now());
+    if (h >= 0 && h <= 24) s += `<line class="c-now" x1="${X(h).toFixed(1)}" x2="${X(h).toFixed(1)}" y1="${TOP - 6}" y2="${B}"/>`;
+  }
+  svg.innerHTML = s;
+}
+function renderTides() {
+  const I = info(state.sel), st = stationById(state.station), status = state.tides.status;
+  const ex = status === "ok" ? state.tides.ex : null;
+  const S = tideStrength(state.sel);
+  $("tideBadge").textContent = status === "ok" ? "NOAA" : status === "loading" ? "Loading" : "Moon estimate";
+  $("tideWord").textContent = S.word;
+  if (S.real) $("tideWhy").textContent = `${ft(S.range)} range at ${shortName(st)}`;
+  else {
+    const decTxt = Math.abs(I.decDeg) < 4 ? "Moon near the equator" : `Moon ${Math.round(Math.abs(I.decDeg))}° ${I.decDeg > 0 ? "north" : "south"}`;
+    $("tideWhy").textContent = decTxt + (I.near <= 2.5 ? `, near ${I.nearType} moon` : "");
+  }
+  renderTideChart(I, ex);
+  const day = ex ? ex.filter(e => e.t >= I.start && e.t < I.end) : [];
+  $("hilo").innerHTML = day.map(e => `<li><span class="ht">${e.type === "H" ? "High" : "Low"}</span><span class="hv">${T(e.t)}<small>${ft(e.v)}</small></span></li>`).join("");
+  $("hilo").hidden = !day.length;
+
+  const rows = stripRanges();
+  const maxR = Math.max(0.1, ...rows.map(r => r.range || 0));
+  $("tideSpark").innerHTML = rows.map(r => {
+    const sel = same(r.ymd, state.sel);
+    const v = r.range != null ? r.range / maxR : r.I.tide;
+    const label = r.range != null ? `${ft(r.range)} range` : estWord(r.I.tide);
+    return `<button type="button" class="${sel ? "sel" : ""}" data-k="${keyOf(r.ymd)}" aria-label="${dayLabel(r.ymd)}: ${label}"><span class="bar" style="height:${Math.round(8 + v * 38)}px"></span><span class="n">${r.ymd[2]}</span></button>`;
+  }).join("");
+  $("tideNote").textContent = status === "ok"
+    ? `Bars show each day's tide range at ${shortName(st)}, from NOAA predictions. Wind can push the real water well above or below these numbers.`
+    : status === "loading" ? "Loading NOAA predictions…"
+      : status === "offline" ? "Can't reach NOAA, so this is an estimate from the moon. Texas tides run biggest when the moon swings far north or south."
+        : "NOAA has no predictions for this station right now, so this is an estimate from the moon. Try a nearby station.";
+
+  const near = stationsByDistance(state.spot.lat, state.spot.lng).slice(0, 8);
+  if (!near.some(s => s.id === state.station)) near.push({ ...st, km: km(state.spot.lat, state.spot.lng, st.lat, st.lng) });
+  $("station").innerHTML = near.map(s => `<option value="${s.id}"${s.id === state.station ? " selected" : ""}>${esc(s.name)} · ${distText(s.km)}</option>`).join("");
+  const k = keyOf(state.sel).replace(/-/g, "");
+  $("noaaPred").href = `https://tidesandcurrents.noaa.gov/noaatidepredictions.html?id=${state.station}&units=standard&bdate=${k}&edate=${k}&timezone=LST/LDT&clock=12hour&datum=MLLW&interval=hilo&action=dailychart`;
+  $("noaaObs").href = `https://tidesandcurrents.noaa.gov/waterlevels.html?id=${state.station}`;
+}
+
+// ---------- Forecast ----------
+async function loadForecast() {
+  const key = `${state.spot.lat.toFixed(3)},${state.spot.lng.toFixed(3)}`;
+  if (state.fc.key === key && state.fc.status !== "idle") return;
+  const tok = (state.fc = { key, status: "loading", periods: null });
+  renderForecast();
+  const tries = [state.spot, stationById(state.station)];
+  let result = { key, status: "error", periods: null };
+  for (const p of tries) {
+    try { const periods = await nwsHourly(p.lat, p.lng); if (periods.length) { result = { key, status: "ok", periods }; break; } }
+    catch (e) { if (e instanceof NetError) { result = { key, status: "offline", periods: null }; break; } }
+  }
+  if (state.fc !== tok) return;
+  state.fc = result;
+  renderForecast(); renderDay(); renderNotes();
+}
+function renderForecast() {
+  const F = state.fc, I = info(state.sel), el = $("fc");
+  if (F.status === "loading" || F.status === "idle") { el.innerHTML = `<p class="small">Loading the forecast…</p>`; return; }
+  if (F.status === "offline") { el.innerHTML = `<p class="small">Can't reach the National Weather Service right now.</p>`; return; }
+  if (F.status !== "ok") { el.innerHTML = `<p class="small">No forecast is available for this spot.</p>`; return; }
+  if (I.end < Date.now()) { el.innerHTML = `<p class="small">Forecasts only cover today and the days ahead.</p>`; return; }
+  const last = F.periods[F.periods.length - 1];
+  if (I.start >= last.end) { el.innerHTML = `<p class="small">The hourly forecast reaches about a week ahead. Check back closer to ${dayLabel(state.sel)}.</p>`; return; }
+  const parts = [["Morning", 5, 11], ["Midday", 11, 16], ["Evening", 16, 21]];
+  const rows = parts.map(([name, a, b]) => {
+    const P = F.periods.filter(p => p.t >= I.start + a * HOUR && p.t < I.start + b * HOUR && p.end > Date.now());
+    if (!P.length) return "";
+    const los = P.map(p => p.lo).filter(v => v != null), his = P.map(p => p.hi).filter(v => v != null);
+    const dirs = {}; P.forEach(p => { dirs[p.dir] = (dirs[p.dir] || 0) + 1; });
+    const dir = Object.keys(dirs).sort((x, y) => dirs[y] - dirs[x])[0] || "";
+    const lo = los.length ? Math.min(...los) : null, hi = his.length ? Math.max(...his) : null;
+    const wind = hi == null ? "Wind n/a" : lo !== hi ? `${dir} ${lo}–${hi}` : `${dir} ${hi}`;
+    const temps = P.map(p => p.temp).filter(v => v != null);
+    const rain = Math.max(0, ...P.map(p => p.rain || 0));
+    const mid = P[Math.floor(P.length / 2)];
+    return `<div class="fc-row"><span class="fl">${name}</span><span class="fw${hi >= 20 ? " hot" : ""}">${wind}${hi != null ? " mph" : ""}<span class="fs">${esc(mid.short)}</span></span><span class="ft">${temps.length ? Math.round(Math.max(...temps)) + "°" : ""}<span>${rain}% rain</span></span></div>`;
+  }).join("");
+  el.innerHTML = rows || `<p class="small">Nothing left to forecast for today.</p>`;
+}
+
+// ---------- Day ----------
+function renderStrip() {
+  let html = "";
+  for (let i = 0; i < 14; i++) {
+    const ymd = addDays(state.stripStart, i), I = info(ymd);
+    const sel = same(ymd, state.sel), isToday = same(ymd, state.today);
+    let dots = ""; for (let j = 1; j <= 5; j++) dots += `<i class="${j <= I.stars ? "on" : ""}"></i>`;
+    html += `<button type="button" class="day${isToday ? " is-today" : ""}" aria-pressed="${sel}" data-k="${keyOf(ymd)}" aria-label="${dayLabel(ymd)}, ${I.name}, ${WORDS[I.stars - 1]}">
+      <span class="dow">${isToday ? "Today" : fmtDow.format(Date.UTC(ymd[0], ymd[1] - 1, ymd[2]))}</span>
+      <span class="dnum">${ymd[2]}</span>${moonSVG(I.phase, 20)}<span class="dots">${dots}</span></button>`;
+  }
+  $("strip").innerHTML = html;
+  $("stripLabel").textContent = same(state.stripStart, state.today) ? "Next two weeks" : `Two weeks from ${dayLabel(state.stripStart)}`;
+}
+function windowStatus(w, now) {
+  if (now >= w.a && now <= w.b) return { cls: "is-now", text: "Now" };
+  if (now > w.b) return { cls: "is-past", text: "Done" };
+  const mins = Math.round((w.a - now) / MIN);
+  if (mins < 60) return { cls: "", text: `in ${mins}m` };
+  const h = Math.floor(mins / 60), mm = mins % 60;
+  return { cls: "", text: h < 24 ? `in ${h}h ${mm}m` : "" };
+}
+function renderDay() {
+  const I = info(state.sel), isToday = same(state.sel, state.today), now = Date.now();
+  const offset = diffDays(state.today, state.sel);
+  $("dayEyebrow").textContent = isToday ? "Today" : offset === 1 ? "Tomorrow" : offset > 0 ? `In ${offset} days` : offset === -1 ? "Yesterday" : `${-offset} days ago`;
+  $("dayTitle").textContent = dayLabel(state.sel);
+  $("dayPhase").innerHTML = `${moonSVG(I.phase, 22)}<span>${I.name} · ${Math.round(I.lit * 100)}% lit</span>`;
+  $("dayRating").innerHTML = `${starsHTML(I.stars)}<span class="rating-word">${WORDS[I.stars - 1]}</span><span class="sr">${I.stars} of 5</span>`;
+  const f = (k, v) => `<div><dt>${k}</dt><dd>${v ? T(v) : "None"}</dd></div>`;
+  $("facts").innerHTML = f("Sunrise", I.sunrise) + f("Sunset", I.sunset) + f("Moonrise", I.moonrise) + f("Moonset", I.moonset);
+  if (!I.windows.length) { $("windows").innerHTML = `<li class="empty">No windows fall on this day.</li>`; }
+  else {
+    $("windows").innerHTML = I.windows.map(w => {
+      const st = isToday ? windowStatus(w, now) : { cls: "", text: "" };
+      const sunTag = w.sun ? ` · <b>at ${w.sun}</b>` : "";
+      const p = w.b > now ? forecastAt(w.c) : null;
+      const wx = p && p.hi != null ? ` · <span class="wx">wind ${esc(windTxt(p))}</span>` : "";
+      return `<li class="win ${w.kind} ${st.cls}"><span class="kind">${w.kind}</span>
+        <span class="time">${range(w.a, w.b)}</span><span class="src">${w.src}${sunTag}${wx}</span>
+        <span class="status">${st.text}</span></li>`;
+    }).join("");
+  }
+  renderChart(I, isToday, now);
+}
+function renderChart(I, isToday, now) {
+  const L = 6, R = 354, TOP = 10, B = 136, RAIL = 144, RH = 8;
+  const X = h => L + (Math.max(0, Math.min(24, h)) / 24) * (R - L);
+  const hrs = t => ((t - I.start) / (I.end - I.start)) * 24;
+  const Y = v => B - (v / 100) * (B - TOP - 4);
+  let s = `<defs><linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--sun);stop-opacity:.42"/><stop offset="1" style="stop-color:var(--sun);stop-opacity:.02"/></linearGradient></defs>`;
+  if (I.sunrise) s += `<rect class="c-night" x="${L}" y="${TOP}" width="${(X(hrs(I.sunrise)) - L).toFixed(1)}" height="${B - TOP}"/>`;
+  if (I.sunset) s += `<rect class="c-night" x="${X(hrs(I.sunset)).toFixed(1)}" y="${TOP}" width="${(R - X(hrs(I.sunset))).toFixed(1)}" height="${B - TOP}"/>`;
+  [6, 12, 18].forEach(h => { s += `<line class="c-grid" x1="${X(h)}" x2="${X(h)}" y1="${TOP}" y2="${B}"/>`; });
+  const pts = I.curve.map(([h, v]) => `${X(h).toFixed(1)} ${Y(v).toFixed(1)}`);
+  s += `<path d="M${L} ${B}L${pts.join("L")}L${R} ${B}Z" fill="url(#actGrad)"/>`;
+  s += `<path class="c-line" d="M${pts.join("L")}"/>`;
+  I.windows.filter(w => w.kind === "major").forEach(w => {
+    const h = hrs(w.c); const v = I.curve[Math.round((h / 24) * 144)];
+    if (v) s += `<circle class="c-peak" cx="${X(h).toFixed(1)}" cy="${Y(v[1]).toFixed(1)}" r="4"/>`;
+  });
+  s += `<rect class="c-rail" x="${L}" y="${RAIL}" width="${R - L}" height="${RH}" rx="2"/>`;
+  I.all.forEach(w => {
+    const a = hrs(w.a), b = hrs(w.b);
+    if (b <= 0 || a >= 24) return;
+    s += `<rect class="${w.kind === "major" ? "c-major" : "c-minor"}" x="${X(a).toFixed(1)}" y="${RAIL}" width="${(X(b) - X(a)).toFixed(1)}" height="${RH}" rx="2"/>`;
+  });
+  ["12a", "3a", "6a", "9a", "12p", "3p", "6p", "9p", "12a"].forEach((t, i) => {
+    const anchor = i === 0 ? "start" : i === 8 ? "end" : "middle";
+    s += `<text class="c-axis" x="${X(i * 3)}" y="172" text-anchor="${anchor}">${t}</text>`;
+  });
+  if (isToday) {
+    const h = hrs(now);
+    if (h >= 0 && h <= 24) {
+      const x = X(h);
+      s += `<line class="c-now" x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${TOP + 12}" y2="${RAIL + RH}"/>`;
+      s += `<text class="c-nowt" x="${(x + (h > 20 ? -4 : 4)).toFixed(1)}" y="${TOP + 10}" text-anchor="${h > 20 ? "end" : "start"}">Now</text>`;
+    }
+  }
+  const svg = $("chart");
+  svg.innerHTML = s;
+  const peaks = I.windows.filter(w => w.kind === "major").map(w => T(w.c)).join(" and ");
+  svg.setAttribute("aria-label", peaks ? `Activity through the day, peaking near ${peaks}` : "Activity through the day");
+}
+
+// ---------- Notes ----------
+const NORTHERLY = /^(N|NNE|NE|NNW|NW)$/;
+function renderNotes() {
+  const I = info(state.sel), out = [], isToday = same(state.sel, state.today);
+  const L = state.live.status === "ok" ? state.live : null;
+  if (isToday && L && L.level && L.levelPred != null) {
+    const diff = +L.level.d.v - L.levelPred;
+    if (diff <= -0.5) out.push(["Water is running low", `${shortName(L.level.station)} reads ${Math.abs(diff).toFixed(1)} ft below forecast. Flats may be drained, so fish guts, channels, and drop-offs.`]);
+    else if (diff >= 0.5) out.push(["Water is running high", `${shortName(L.level.station)} reads ${diff.toFixed(1)} ft above forecast. Fish push up into shorelines and back marsh, so follow them in.`]);
+  }
+  if (isToday && L && L.wind) {
+    const mph = +L.wind.d.s * 1.15078;
+    if (NORTHERLY.test(L.wind.d.dr || "") && mph >= 15) out.push(["North wind now", `${L.wind.d.dr} at ${Math.round(mph)} mph. Expect water to drop on the flats. South- and west-facing shorelines will be calmer.`]);
+  }
+  const sunW = I.windows.find(w => w.sun && w.kind === "major") || I.windows.find(w => w.sun);
+  if (sunW) out.push([`Moon lines up with ${sunW.sun}`, `The ${sunW.kind} window at ${range(sunW.a, sunW.b)} overlaps ${sunW.sun}. Low light plus moon timing makes this the strongest stretch of the day.`]);
+  else {
+    const best = I.windows.find(w => w.kind === "major");
+    if (best) out.push(["Plan around the major", `No window lands on sunrise or sunset. The ${range(best.a, best.b)} major is the one to fish.`]);
+  }
+  const ex = state.tides.status === "ok" ? state.tides.ex : null;
+  if (ex) {
+    let bestFall = null;
+    for (let i = 0; i < ex.length - 1; i++) {
+      const a = ex[i], b = ex[i + 1];
+      if (a.type !== "H" || b.type !== "L") continue;
+      const s0 = Math.max(a.t, I.sunrise || I.start), s1 = Math.min(b.t, I.sunset || I.end);
+      if (s1 - s0 < HOUR) continue;
+      const drop = a.v - b.v;
+      if (!bestFall || drop > bestFall.drop) bestFall = { a, b, drop };
+    }
+    if (bestFall && bestFall.drop >= 0.2) out.push(["Falling tide in daylight", `High ${T(bestFall.a.t)} to low ${T(bestFall.b.t)}, a ${bestFall.drop.toFixed(1)} ft drop. Outgoing water pulls bait off the flats, so set up on drains and points.`]);
+  }
+  const S = tideStrength(state.sel);
+  if (S.word === "Weak") out.push(["Weak tide", "The water may barely move. Fish wind-blown shorelines and deeper structure, and keep moving."]);
+  else if (S.word === "Strong" && !ex) out.push(["Bigger tide swing", "Fish passes, jetties, and marsh drains where moving water pinches bait."]);
+  if (state.fc.status === "ok") {
+    const P = state.fc.periods.filter(p => p.t >= I.start + 5 * HOUR && p.t < I.start + 20 * HOUR && p.end > Date.now());
+    const gusty = P.filter(p => p.hi != null && p.hi >= 20);
+    if (gusty.length) { const peak = gusty.reduce((x, y) => (y.hi > x.hi ? y : x)); out.push(["Windy forecast", `Up to ${peak.hi} mph from the ${peak.dir} around ${T(peak.t)}. Look for protected shorelines and keep an eye on the bay crossing.`]); }
+  }
+  if (out.length < 3) out.push(["Wind beats tide here", "A strong north wind behind a front can push water out of the bay and drain the flats. Check the water level before you go."]);
+  if (I.near <= 2.5 && out.length < 4) {
+    out.push(I.nearType === "new"
+      ? ["Dark moon", "Within a couple of days of the new moon. Dark nights tend to push feeding into dawn and dusk."]
+      : ["Bright moon", "Near the full moon, trout and reds often feed at night, so the dawn bite can be slower. Midday majors are worth fishing."]);
+  }
+  $("notes").innerHTML = out.slice(0, 4).map(([h, t]) => `<li><b>${esc(h)}</b><span>${esc(t)}</span></li>`).join("");
+}
+
+function renderBest() {
+  const days = [];
+  for (let i = 0; i < 14; i++) { const ymd = addDays(state.today, i); days.push({ ymd, I: info(ymd) }); }
+  days.sort((a, b) => b.I.score - a.I.score || diffDays(b.ymd, a.ymd));
+  $("best").innerHTML = days.slice(0, 3).map(({ ymd, I }) => {
+    const sunW = I.windows.find(w => w.sun);
+    const extra = sunW ? ` · ${sunW.kind} at ${sunW.sun}` : "";
+    return `<li><button type="button" data-k="${keyOf(ymd)}" aria-pressed="${same(ymd, state.sel)}">${moonSVG(I.phase, 22)}<span><span class="bd">${dayLabel(ymd)}</span><span class="bp">${I.event || I.name}${extra}</span></span>${starsHTML(I.stars)}</button></li>`;
+  }).join("");
+}
+function renderClock() { $("clock").textContent = fmtClock.format(Date.now()) + " CT"; }
+
+function renderAll() {
+  renderSpot(); renderStrip(); renderDay(); renderTides(); renderForecast(); renderNotes(); renderBest();
+  $("datePick").value = keyOf(state.sel);
+  loadTides(); loadLive(); loadForecast();
+}
+function select(ymd, { recenter = false } = {}) {
+  state.sel = ymd;
+  const off = diffDays(state.stripStart, ymd), fromToday = diffDays(state.today, ymd);
+  if (recenter || off < 0 || off > 13) state.stripStart = fromToday >= 0 && fromToday <= 13 ? state.today : ymd;
+  renderAll();
+  const chip = document.querySelector(`#strip [data-k="${keyOf(ymd)}"]`);
+  if (chip) chip.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+const parseKey = k => k.split("-").map(Number);
+
+$("strip").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) select(parseKey(b.dataset.k)); });
+$("tideSpark").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) select(parseKey(b.dataset.k)); });
+$("best").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) select(parseKey(b.dataset.k), { recenter: true }); });
+$("todayBtn").addEventListener("click", () => { state.stripStart = state.today; select(state.today); $("strip").scrollLeft = 0; });
+$("datePick").addEventListener("change", e => { if (/^\d{4}-\d{2}-\d{2}$/.test(e.target.value)) select(parseKey(e.target.value), { recenter: true }); });
+$("station").addEventListener("change", e => { state.station = e.target.value; saveSpot(); renderAll(); });
+$("refreshBtn").addEventListener("click", () => { loadLive(true); state.fc.key = ""; loadForecast(); });
+$("spotToggle").addEventListener("click", () => openSpotPanel($("spotPanel").hidden));
+$("spotSearch").addEventListener("input", renderResults);
+$("spotSearch").addEventListener("keydown", e => {
+  if (e.key === "Escape") { openSpotPanel(false); $("spotToggle").focus(); }
+  if (e.key === "Enter") { e.preventDefault(); const first = $("spotResults").querySelector("button"); if (first) first.click(); }
+});
+$("spotResults").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.id) chooseSpot(SPOTS.find(s => s.id === b.dataset.id));
+  else if (b.dataset.lat) chooseSpot(customSpot(+b.dataset.lat, +b.dataset.lng));
+});
+
+const saved = spotFromSaved();
+setSpot(saved ? saved.spot : DEFAULT_SPOT, saved ? saved.station : DEFAULT_SPOT.st);
+state.sel = state.today; state.stripStart = state.today;
+renderClock();
+renderAll();
+setInterval(() => {
+  const t = ymdOf(Date.now());
+  if (!same(t, state.today)) {
+    const wasToday = same(state.sel, state.today);
+    state.today = t;
+    if (wasToday) { state.sel = t; state.stripStart = t; }
+    renderAll();
+  } else if (same(state.sel, state.today)) { renderDay(); renderTideChart(info(state.sel), state.tides.status === "ok" ? state.tides.ex : null); }
+  renderClock();
+}, 30000);
+setInterval(() => { loadLive(true); }, 6 * MIN);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) loadLive(true); });
+</script>
+</body>
+</html>

@@ -77,6 +77,8 @@ h1 span{color:var(--sun)}
 .live-src{margin:2px 0 0;font-size:13px;color:var(--muted)}
 .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+.tile .label{font-size:11px;letter-spacing:.05em}
+@media (max-width:370px){.tile{padding:10px}}
 .tv{margin:4px 0 0;font-family:var(--font-display);font-size:clamp(24px,7vw,32px);font-weight:800;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tv small{font-size:.55em;font-weight:700;color:var(--muted);margin-left:2px}
 .ts{margin:5px 0 0;font-size:12.5px;line-height:1.3;color:var(--muted)}
@@ -241,7 +243,7 @@ footer p{margin:0 0 6px}
     <div class="tiles">
       <div class="tile wait" id="tWind"><p class="label">Wind</p><p class="tv">--</p><p class="ts">Loading</p></div>
       <div class="tile wait" id="tLevel"><p class="label">Water</p><p class="tv">--</p><p class="ts">Loading</p></div>
-      <div class="tile wait" id="tTemp"><p class="label">Temp</p><p class="tv">--</p><p class="ts">Loading</p></div>
+      <div class="tile wait" id="tTemp"><p class="label">Water temp</p><p class="tv">--</p><p class="ts">Loading</p></div>
     </div>
   </section>
 
@@ -638,11 +640,17 @@ function tideAt(ex, t) {
   }
   return null;
 }
+// Range = highest high minus lowest low within the day itself, so it matches the times listed.
+// If a day has only a high or only a low (common with Gulf tides), widen the window to find its partner.
 function dayRange(ex, start, end) {
-  const win = ex.filter(e => e.t >= start - 3 * HOUR && e.t < end + 3 * HOUR);
-  const hi = win.filter(e => e.type === "H"), lo = win.filter(e => e.type === "L");
-  if (!hi.length || !lo.length) return null;
-  return Math.max(...hi.map(e => e.v)) - Math.min(...lo.map(e => e.v));
+  const pick = (a, b) => {
+    const win = ex.filter(e => e.t >= a && e.t < b);
+    const hi = win.filter(e => e.type === "H"), lo = win.filter(e => e.type === "L");
+    const r1 = v => Math.round(v * 10) / 10; // same rounding as the times shown on screen
+    return hi.length && lo.length ? r1(Math.max(...hi.map(e => e.v))) - r1(Math.min(...lo.map(e => e.v))) : null;
+  };
+  const r = pick(start, end);
+  return r != null ? r : pick(start - 6 * HOUR, end + 6 * HOUR);
 }
 
 async function latestReading(product, stations) {

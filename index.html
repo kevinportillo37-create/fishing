@@ -135,6 +135,30 @@ input.pill{padding:5px 10px}
 .win.is-now{border-color:var(--sun)}
 .win.is-now .status{color:var(--sun)}
 .win.is-past{opacity:.5}
+.win.night .src{color:var(--muted)}
+/* Game plan */
+.plan-top{display:flex;flex-direction:column;gap:8px;margin:10px 0 0}
+.plan-top b{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:8px}
+.targets,.mynote{margin:0;font-size:15px;line-height:1.45;max-width:62ch}
+.regs{color:var(--alert);font-weight:700}
+.alerts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.alerts li{font-size:14px;line-height:1.4;font-weight:600;color:var(--alert)}
+.plan{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;background:var(--raised);border:1px solid transparent}
+.plan.is-best,.plan.is-now{border-color:var(--sun)}
+.plan.is-past{opacity:.5}
+.plan-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;column-gap:10px}
+.plan-head .kind{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 8px;border-radius:999px}
+.plan.major .kind{background:var(--sun);color:var(--sun-ink)}
+.plan.minor .kind{border:1px solid var(--sand);color:var(--sand)}
+.plan-head .time{font-family:var(--font-display);font-size:clamp(20px,5.6vw,25px);font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
+.best-tag{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sun);margin-right:4px}
+.plan-head .status{font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap;text-align:right}
+.plan.is-now .status{color:var(--sun)}
+.plan .cond{margin:0;font-size:14px;line-height:1.4;color:var(--water)}
+.plan-lines{margin:2px 0 0;display:flex;flex-direction:column;gap:6px}
+.plan-lines div{display:grid;grid-template-columns:48px minmax(0,1fr);gap:8px}
+.plan-lines dt{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.plan-lines dd{margin:0;font-size:15px;line-height:1.4}
 .empty{color:var(--muted);font-size:14px;padding:6px 0}
 .chart{margin:18px 0 0}
 .chart svg{display:block;width:100%;height:auto;max-height:260px}
@@ -189,11 +213,10 @@ input.pill{padding:5px 10px}
 .fc-row .ft{text-align:right;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
 .fc-row .ft span{display:block;font-size:12px;font-weight:500;color:var(--muted)}
 
-/* Notes + best days */
-.notes ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
-.notes li{font-size:15px;line-height:1.45;max-width:62ch}
-.notes li b{display:block;color:var(--fg);font-weight:700;margin-bottom:2px}
-.notes li span{color:var(--muted)}
+/* Spot panel + best days */
+.read{margin:0;font-size:15px;line-height:1.45;max-width:62ch}
+.notes textarea{width:100%;background:var(--raised);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:16px;line-height:1.4;resize:vertical}
+.notes .small{margin-top:2px}
 .best ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 .best button{width:100%;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;text-align:left;background:var(--raised);border:1px solid transparent;border-radius:12px;padding:10px 12px;cursor:pointer}
 .best button[aria-pressed="true"]{border-color:var(--sun)}
@@ -269,7 +292,8 @@ footer p{margin:0 0 6px}
         <div class="rating" id="dayRating"></div>
       </div>
       <dl class="facts" id="facts"></dl>
-      <h3 class="label">Feeding windows</h3>
+      <h3 class="label">Game plan · from land</h3>
+      <div class="plan-top" id="planTop"></div>
       <ol class="windows" id="windows"></ol>
       <figure class="chart" style="margin-inline:0">
         <svg id="chart" viewBox="0 0 360 178" role="img" aria-label="Activity through the day"></svg>
@@ -305,8 +329,17 @@ footer p{margin:0 0 6px}
       </section>
 
       <section class="panel notes">
-        <div class="panel-head"><h3 class="label">Playbook for this day</h3></div>
-        <ul id="notes"></ul>
+        <div class="panel-head"><h3 class="label">This spot</h3></div>
+        <p class="read" id="spotRead"></p>
+        <div class="field">
+          <label class="label" for="spotType">Spot type</label>
+          <select id="spotType"></select>
+        </div>
+        <div class="field">
+          <label class="label" for="spotNotes" id="spotNotesLabel">Your notes</label>
+          <textarea id="spotNotes" rows="3" maxlength="500" placeholder="Where fish were, what worked, where to park…"></textarea>
+          <p class="small">Saved on this phone only. Your note shows at the top of the game plan.</p>
+        </div>
       </section>
 
       <section class="panel best">
@@ -319,6 +352,7 @@ footer p{margin:0 0 6px}
   <footer>
     <p id="footLoc">All times are Central Time.</p>
     <p>Major windows run one hour either side of the moon passing overhead or underfoot. Minor windows run 30 minutes either side of moonrise and moonset. Ratings weigh the moon phase, windows that land on sunrise or sunset, and how close the moon is to Earth.</p>
+    <p>The game plan uses common Texas inshore patterns for fishing from land. They're rules of thumb, not guarantees. Check TPWD rules before keeping fish.</p>
     <p>Tide predictions, water level, wind, and water temperature come from NOAA Tides &amp; Currents. The forecast comes from the National Weather Service. Moon and sun times are calculated on your phone, so they work offline.</p>
   </footer>
 </div>
@@ -889,7 +923,7 @@ async function loadLive(force) {
     if (state.live !== tok) return;
     state.live = { key, status: "offline" };
   }
-  renderLive(); renderNotes();
+  renderLive(); renderDay();
 }
 
 // ---------- Tides ----------
@@ -907,7 +941,7 @@ async function loadTides() {
     if (state.tides !== tok) return;
     state.tides = { key, status: e instanceof NetError ? "offline" : "error", ex: null, msg: e.message };
   }
-  renderTides(); renderNotes();
+  renderTides(); renderDay();
 }
 function renderTideChart(I, ex) {
   const svg = $("tideChart");
@@ -1001,7 +1035,7 @@ async function loadForecast() {
   }
   if (state.fc !== tok) return;
   state.fc = result;
-  renderForecast(); renderDay(); renderNotes();
+  renderForecast(); renderDay();
 }
 function renderForecast() {
   const F = state.fc, I = info(state.sel), el = $("fc");
@@ -1059,18 +1093,7 @@ function renderDay() {
   $("dayRating").innerHTML = `${starsHTML(I.stars)}<span class="rating-word">${WORDS[I.stars - 1]}</span><span class="sr">${I.stars} of 5</span>`;
   const f = (k, v) => `<div><dt>${k}</dt><dd>${v ? T(v) : "None"}</dd></div>`;
   $("facts").innerHTML = f("Sunrise", I.sunrise) + f("Sunset", I.sunset) + f("Moonrise", I.moonrise) + f("Moonset", I.moonset);
-  if (!I.windows.length) { $("windows").innerHTML = `<li class="empty">No windows fall on this day.</li>`; }
-  else {
-    $("windows").innerHTML = I.windows.map(w => {
-      const st = isToday ? windowStatus(w, now) : { cls: "", text: "" };
-      const sunTag = w.sun ? ` · <b>at ${w.sun}</b>` : "";
-      const p = w.b > now ? forecastAt(w.c) : null;
-      const wx = p && p.hi != null ? ` · <span class="wx">wind ${esc(windTxt(p))}</span>` : "";
-      return `<li class="win ${w.kind} ${st.cls}"><span class="kind">${w.kind}</span>
-        <span class="time">${range(w.a, w.b)}</span><span class="src">${w.src}${sunTag}${wx}</span>
-        <span class="status">${st.text}</span></li>`;
-    }).join("");
-  }
+  renderPlan(I, isToday, now);
   renderChart(I, isToday, now);
 }
 function renderChart(I, isToday, now) {
@@ -1113,55 +1136,251 @@ function renderChart(I, isToday, now) {
   svg.setAttribute("aria-label", peaks ? `Activity through the day, peaking near ${peaks}` : "Activity through the day");
 }
 
-// ---------- Notes ----------
+// ---------- Game plan (for fishing from land: bank, piers, jetties) ----------
 const NORTHERLY = /^(N|NNE|NE|NNW|NW)$/;
-function renderNotes() {
-  const I = info(state.sel), out = [], isToday = same(state.sel, state.today);
+const SPOT_TYPES = {
+  sylvan: "shore", morgans: "channel", baytown: "shore", sanjac: "channel", pinegully: "pier", kemah: "channel",
+  clearlake: "shore", aprilfool: "shore", dickinson: "flats", tcdike: "jetty", anahuac: "shore", beachcity: "shore",
+  smithpt: "shore", bolivarflats: "flats", portbolivar: "channel", crystal: "surf", rollover: "shore", highisland: "surf",
+  northjetty: "jetty", southjetty: "jetty", seawall: "surf", pier21: "channel", seawolf: "pier", causeway: "channel",
+  jamaica: "shore", chocolate: "flats", sanluis: "channel", christmas: "flats", surfside: "jetty", quintana: "surf",
+  sargent: "shore", sabinepass: "jetty", pleasureisl: "shore", poc: "flats", seadrift: "flats", portlavaca: "pier",
+  rockport: "shore", portA: "jetty", bobhall: "pier", packery: "channel", spi: "jetty", portisabel: "flats",
+};
+const CAUTION = {
+  sanluis: "San Luis Pass has strong, dangerous currents. Fish from the bank and don't wade.",
+};
+const TYPE_INFO = {
+  shore: { name: "Bay shoreline", read: "Look for drains, points, shell or rocks, and birds diving on bait." },
+  pier: { name: "Pier", read: "Fish hold on the pilings and along the shadow line. The deepest water is usually at the end." },
+  jetty: { name: "Rock jetty or dike", read: "Fish hold tight to the rocks and along current seams. Watch your footing on wet rocks." },
+  channel: { name: "Channel or pass", read: "Fish the drop-off where shallow water meets the channel, and the seams where fast and slow water meet." },
+  surf: { name: "Gulf beach", read: "Read the guts between sandbars. Darker or calmer water usually means deeper water." },
+  flats: { name: "Marsh and flats", read: "Look for drains, bayou mouths, and bait flicking on the surface." },
+};
+// Typical upper Texas coast bay water temperature by month (°F), used when no live reading applies.
+const MONTH_TEMP = [54, 57, 64, 71, 78, 84, 86, 87, 83, 75, 66, 58];
+
+const spotKey = () => state.spot.custom ? `c:${state.spot.lat.toFixed(4)},${state.spot.lng.toFixed(4)}` : state.spot.id;
+function readMap(k) { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (e) { return {}; } }
+function writeMap(k, m) { try { localStorage.setItem(k, JSON.stringify(m)); } catch (e) {} }
+function spotType() {
+  const t = readMap("stp-types")[spotKey()] || (state.spot.custom ? "shore" : SPOT_TYPES[state.spot.id]);
+  return TYPE_INFO[t] ? t : "shore";
+}
+function spotNote() { return readMap("stp-notes")[spotKey()] || ""; }
+
+function tideStage(ex, w) {
+  if (!ex) return null;
+  const turn = ex.find(e => e.t >= w.a && e.t <= w.b);
+  if (turn) {
+    const hi = turn.type === "H";
+    return { kind: hi ? "turnHigh" : "turnLow", text: `${hi ? "High" : "Low"} tide at ${T(turn.t)}, then ${hi ? "falling" : "rising"}` };
+  }
+  for (let i = 0; i < ex.length - 1; i++) {
+    const a = ex[i], b = ex[i + 1];
+    if (w.c >= a.t && w.c < b.t) {
+      if (Math.abs(a.v - b.v) < 0.25) return { kind: "flat", text: "Tide barely moving" };
+      const falling = a.type === "H";
+      return { kind: falling ? "falling" : "rising", text: `${falling ? "Falling" : "Rising"} until the ${T(b.t)} ${falling ? "low" : "high"}` };
+    }
+  }
+  return null;
+}
+function lightOf(w, I) {
+  if (w.sun === "sunrise") return "dawn";
+  if (w.sun === "sunset") return "dusk";
+  if (I.sunrise && I.sunset && w.c > I.sunrise && w.c < I.sunset) return "day";
+  return "night";
+}
+function waterTemp(isToday) {
+  const L = state.live.status === "ok" ? state.live : null;
+  if (isToday && L && L.temp && isFinite(+L.temp.d.v)) return +L.temp.d.v;
+  return MONTH_TEMP[state.sel[1] - 1];
+}
+
+function targetsFor(type, ymd, temp) {
+  const m = ymd[1], d = ymd[2];
+  const rocks = type === "jetty" || type === "pier";
+  const deep = type === "jetty" || type === "channel" || type === "surf";
+  let s;
+  if (temp < 60) s = rocks ? "Black drum and sheepshead on the rocks and pilings. Reds and trout in deeper water." : "Reds and black drum. Trout move to deeper water.";
+  else if (m >= 2 && m <= 4) s = rocks ? "Sheepshead and black drum on the rocks, plus trout and reds." : "Trout and reds.";
+  else if (m >= 5 && m <= 8) s = deep ? "Trout, reds, and Spanish mackerel." : "Trout and reds.";
+  else s = deep ? "Reds and trout. Bull reds around the rocks and passes." : "Reds and trout, often under diving birds.";
+  let flounder = "";
+  // TPWD: flounder bag limit is zero Nov 1 - Dec 14.
+  if (m === 11 || (m === 12 && d <= 14)) flounder = "Flounder must be released until Dec 15.";
+  else if (m === 10 || m === 12) flounder = "Flounder are moving toward the passes.";
+  return { text: s, flounder };
+}
+
+function whereFor(type, stage, light, wind, temp) {
+  const k = stage ? stage.kind : null;
+  const slack = k === "turnHigh" || k === "turnLow" || k === "flat";
+  if (light === "night") {
+    return type === "pier" || type === "jetty" || type === "channel"
+      ? "Lighted piers, bulkheads, and rocks. Fish where the light meets the dark."
+      : "Fish near any lights on the water, where bait gathers.";
+  }
+  let s;
+  switch (type) {
+    case "jetty":
+      s = k === "falling" ? "The side where outgoing water rips past the rocks. Work the current seams."
+        : k === "rising" ? "The side the incoming water hits first, especially near the tip."
+        : slack ? "The tip and the deepest rocks. Slow down until the current starts again."
+        : "Along the rocks and current seams, near the tip.";
+      break;
+    case "pier":
+      s = k === "falling" || k === "rising" ? "The pilings on the down-current side, and the shadow line."
+        : slack ? "The end of the pier for deeper water. Work the pilings slowly."
+        : "The pilings and the end of the pier.";
+      break;
+    case "channel":
+      s = k === "falling" || k === "rising" ? "The channel edge where current meets slower water, and eddies behind pilings and bulkheads."
+        : slack ? "The bottom of the drop-off, close to structure."
+        : "The drop-off where shallow water meets the channel.";
+      break;
+    case "surf":
+      s = k === "rising" ? "The first and second guts. Incoming water brings bait close to the beach."
+        : k === "falling" ? "The deeper first gut, and any cut between sandbars."
+        : "Sandbar edges, and around piers and rock groins.";
+      break;
+    case "flats":
+      s = k === "falling" ? "Marsh drains and bayou mouths, where bait washes out."
+        : k === "rising" ? "Grass edges and the shallow shoreline as fish follow the water in."
+        : slack ? "Deeper holes and channels next to the marsh."
+        : "Drains, bayou mouths, and grass edges.";
+      break;
+    default:
+      s = k === "falling" ? "Drains, creek mouths, and points where water pulls off the bank."
+        : k === "rising" ? "Shoreline edges, shell, and grass as the water pushes in."
+        : slack ? "Deeper water off the bank: the first drop-off and any pilings."
+        : "Drains, points, and shell along the bank.";
+  }
+  if (temp < 60 && (type === "shore" || type === "flats")) s = "Fish deeper: the first drop-off and channels. Sunny afternoons warm the shallows.";
+  if (wind && wind.hi != null) {
+    if (NORTHERLY.test(wind.dir) && wind.hi >= 12 && (type === "shore" || type === "flats")) s += " North wind drains the shallows, so favor deeper edges.";
+    else if (wind.hi >= 18) s += " If it's too rough, find a bank or side out of the wind.";
+  }
+  return s;
+}
+
+function throwFor(type, stage, light, temp, ymd) {
+  const k = stage ? stage.kind : null;
+  const moving = k === "rising" || k === "falling";
+  const m = ymd[1];
+  if (light === "night") return "Live shrimp free-lined into the edge of the light.";
+  if (temp < 60) return type === "jetty" || type === "pier"
+    ? "Shrimp on a bottom rig tight to the rocks or pilings. Fish it slow."
+    : "Soft plastic on a light jighead, or shrimp on a Carolina rig, slow along the bottom.";
+  const lowLight = light === "dawn" || light === "dusk";
+  switch (type) {
+    case "surf":
+      return lowLight && temp >= 68 ? "Topwater or a spoon first, then shrimp on a fish-finder rig in the gut." : "Shrimp or cut mullet on a fish-finder rig in the gut.";
+    case "jetty":
+      return m >= 9 && m <= 11 && moving ? "Live shrimp under a popping cork along the rocks. Cut mullet on the bottom for bull reds." : "Live shrimp under a popping cork, drifted along the rocks.";
+    case "pier":
+      return "Live shrimp free-lined or under a cork near the pilings.";
+    case "channel":
+      return moving ? "Soft plastic on a 1/4 oz jighead, bounced down the drop-off with the current." : "Shrimp on a Carolina rig at the bottom of the drop-off.";
+    default:
+      if (lowLight && temp >= 65) return "Topwater first, then live shrimp under a popping cork.";
+      if (light === "day" && temp >= 82) return "Soft plastic on a jighead, worked slow in deeper or shaded water.";
+      return moving ? "Live shrimp under a popping cork." : "Soft plastic on a jighead, slow along the bottom.";
+  }
+}
+
+function planScore(w, stage, light, wind) {
+  let s = w.kind === "major" ? 2 : 1;
+  if (light === "dawn" || light === "dusk") s += 2;
+  const k = stage && stage.kind;
+  s += k === "falling" ? 1.5 : k === "rising" ? 1 : k === "flat" ? -0.5 : 0;
+  if (wind && wind.hi != null) s -= wind.hi >= 20 ? 2 : wind.hi >= 15 ? 1 : 0;
+  return s;
+}
+
+function renderPlan(I, isToday, now) {
+  const type = spotType();
+  const ex = state.tides.status === "ok" ? state.tides.ex : null;
+  const temp = waterTemp(isToday);
+  const tg = targetsFor(type, state.sel, temp);
+
+  const alerts = [];
+  if (!state.spot.custom && CAUTION[state.spot.id]) alerts.push(CAUTION[state.spot.id]);
   const L = state.live.status === "ok" ? state.live : null;
   if (isToday && L && L.level && L.levelPred != null) {
     const diff = +L.level.d.v - L.levelPred;
-    if (diff <= -0.5) out.push(["Water is running low", `${shortName(L.level.station)} reads ${Math.abs(diff).toFixed(1)} ft below forecast. Flats may be drained, so fish guts, channels, and drop-offs.`]);
-    else if (diff >= 0.5) out.push(["Water is running high", `${shortName(L.level.station)} reads ${diff.toFixed(1)} ft above forecast. Fish push up into shorelines and back marsh, so follow them in.`]);
+    if (diff <= -0.5) alerts.push(`Water is ${Math.abs(diff).toFixed(1)} ft below forecast at ${shortName(L.level.station)}. Shallows may be drained.`);
+    else if (diff >= 0.5) alerts.push(`Water is ${diff.toFixed(1)} ft above forecast at ${shortName(L.level.station)}. Fish can push up shallow.`);
   }
   if (isToday && L && L.wind) {
     const mph = +L.wind.d.s * 1.15078;
-    if (NORTHERLY.test(L.wind.d.dr || "") && mph >= 15) out.push(["North wind now", `${L.wind.d.dr} at ${Math.round(mph)} mph. Expect water to drop on the flats. South- and west-facing shorelines will be calmer.`]);
+    if (NORTHERLY.test(L.wind.d.dr || "") && mph >= 15) alerts.push(`North wind at ${Math.round(mph)} mph right now. Expect the water to drop.`);
   }
-  const sunW = I.windows.find(w => w.sun && w.kind === "major") || I.windows.find(w => w.sun);
-  if (sunW) out.push([`Moon lines up with ${sunW.sun}`, `The ${sunW.kind} window at ${range(sunW.a, sunW.b)} overlaps ${sunW.sun}. Low light plus moon timing makes this the strongest stretch of the day.`]);
-  else {
-    const best = I.windows.find(w => w.kind === "major");
-    if (best) out.push(["Plan around the major", `No window lands on sunrise or sunset. The ${range(best.a, best.b)} major is the one to fish.`]);
-  }
-  const ex = state.tides.status === "ok" ? state.tides.ex : null;
-  if (ex) {
-    let bestFall = null;
-    for (let i = 0; i < ex.length - 1; i++) {
-      const a = ex[i], b = ex[i + 1];
-      if (a.type !== "H" || b.type !== "L") continue;
-      const s0 = Math.max(a.t, I.sunrise || I.start), s1 = Math.min(b.t, I.sunset || I.end);
-      if (s1 - s0 < HOUR) continue;
-      const drop = a.v - b.v;
-      if (!bestFall || drop > bestFall.drop) bestFall = { a, b, drop };
-    }
-    if (bestFall && bestFall.drop >= 0.2) out.push(["Falling tide in daylight", `High ${T(bestFall.a.t)} to low ${T(bestFall.b.t)}, a ${bestFall.drop.toFixed(1)} ft drop. Outgoing water pulls bait off the flats, so set up on drains and points.`]);
-  }
-  const S = tideStrength(state.sel);
-  if (S.word === "Weak") out.push(["Weak tide", "The water may barely move. Fish wind-blown shorelines and deeper structure, and keep moving."]);
-  else if (S.word === "Strong" && !ex) out.push(["Bigger tide swing", "Fish passes, jetties, and marsh drains where moving water pinches bait."]);
   if (state.fc.status === "ok") {
-    const P = state.fc.periods.filter(p => p.t >= I.start + 5 * HOUR && p.t < I.start + 20 * HOUR && p.end > Date.now());
-    const gusty = P.filter(p => p.hi != null && p.hi >= 20);
-    if (gusty.length) { const peak = gusty.reduce((x, y) => (y.hi > x.hi ? y : x)); out.push(["Windy forecast", `Up to ${peak.hi} mph from the ${peak.dir} around ${T(peak.t)}. Look for protected shorelines and keep an eye on the bay crossing.`]); }
+    const a = I.sunrise || I.start + 6 * HOUR, b = I.sunset || I.start + 18 * HOUR;
+    const gusty = state.fc.periods.filter(p => p.t >= a && p.t < b && p.end > now && p.hi != null && p.hi >= 20);
+    if (gusty.length) { const pk = gusty.reduce((x, y) => (y.hi > x.hi ? y : x)); alerts.push(`Windy: up to ${pk.hi} mph from the ${pk.dir} around ${T(pk.t)}.`); }
   }
-  if (out.length < 3) out.push(["Wind beats tide here", "A strong north wind behind a front can push water out of the bay and drain the flats. Check the water level before you go."]);
-  if (I.near <= 2.5 && out.length < 4) {
-    out.push(I.nearType === "new"
-      ? ["Dark moon", "Within a couple of days of the new moon. Dark nights tend to push feeding into dawn and dusk."]
-      : ["Bright moon", "Near the full moon, trout and reds often feed at night, so the dawn bite can be slower. Midday majors are worth fishing."]);
-  }
-  $("notes").innerHTML = out.slice(0, 4).map(([h, t]) => `<li><b>${esc(h)}</b><span>${esc(t)}</span></li>`).join("");
+  const note = spotNote();
+  $("planTop").innerHTML =
+    `<p class="targets"><b>Targets</b>${esc(tg.text)}${tg.flounder ? ` <span class="regs">${esc(tg.flounder)}</span>` : ""}</p>`
+    + (alerts.length ? `<ul class="alerts">${alerts.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : "")
+    + (note ? `<p class="mynote"><b>Your note</b>${esc(note)}</p>` : "");
+
+  if (!I.windows.length) { $("windows").innerHTML = `<li class="empty">No windows fall on this day.</li>`; return; }
+  const plans = I.windows.map(w => {
+    const light = lightOf(w, I), stage = tideStage(ex, w);
+    const wind = w.b > now ? forecastAt(w.c) : null;
+    return { w, light, stage, wind, score: planScore(w, stage, light, wind) };
+  });
+  const open = plans.filter(p => p.light !== "night" && (!isToday || p.w.b > now));
+  const best = open.length > 1 ? open.reduce((x, y) => (y.score > x.score ? y : x)) : open[0] || null;
+  const lit = type === "pier" || type === "jetty" || type === "channel";
+  $("windows").innerHTML = plans.map(p => {
+    const { w, light, stage, wind } = p;
+    const st = isToday ? windowStatus(w, now) : { cls: "", text: "" };
+    if (light === "night") {
+      return `<li class="win ${w.kind} night ${st.cls}"><span class="kind">${w.kind}</span>
+        <span class="time">${range(w.a, w.b)}</span><span class="src">${w.src} · night${lit ? " · fish lighted spots" : ""}</span>
+        <span class="status">${st.text}</span></li>`;
+    }
+    const when = light === "dawn" ? " at sunrise" : light === "dusk" ? " at sunset" : "";
+    const conds = [w.src + when, stage && stage.text, wind && wind.hi != null ? windTxt(wind) : ""].filter(Boolean).join(" · ");
+    const isBest = p === best;
+    return `<li class="plan ${w.kind} ${st.cls}${isBest ? " is-best" : ""}">
+      <div class="plan-head"><span class="kind">${w.kind}</span><span class="time">${range(w.a, w.b)}</span><span class="status">${st.text}</span></div>
+      <p class="cond">${isBest ? `<span class="best-tag">Best bet</span>` : ""}${esc(conds)}</p>
+      <dl class="plan-lines">
+        <div><dt>Where</dt><dd>${esc(whereFor(type, stage, light, wind, temp))}</dd></div>
+        <div><dt>Throw</dt><dd>${esc(throwFor(type, stage, light, temp, state.sel))}</dd></div>
+      </dl></li>`;
+  }).join("");
 }
+
+function renderSpotPanel() {
+  const type = spotType();
+  $("spotType").innerHTML = Object.entries(TYPE_INFO).map(([k, v]) => `<option value="${k}"${k === type ? " selected" : ""}>${v.name}</option>`).join("");
+  $("spotRead").textContent = TYPE_INFO[type].read;
+  $("spotNotesLabel").textContent = `Your notes for ${state.spot.custom ? "this spot" : state.spot.name}`;
+  if (document.activeElement !== $("spotNotes")) $("spotNotes").value = spotNote();
+}
+$("spotType").addEventListener("change", e => {
+  const m = readMap("stp-types"); m[spotKey()] = e.target.value; writeMap("stp-types", m);
+  renderSpotPanel(); renderDay();
+});
+let noteTimer = null;
+$("spotNotes").addEventListener("input", e => {
+  const key = spotKey(), v = e.target.value.trim().slice(0, 500);
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(() => {
+    const m = readMap("stp-notes");
+    if (v) m[key] = v; else delete m[key];
+    writeMap("stp-notes", m);
+    if (key === spotKey()) renderDay();
+  }, 400);
+});
 
 function renderBest() {
   const days = [];
@@ -1176,7 +1395,7 @@ function renderBest() {
 function renderClock() { $("clock").textContent = fmtClock.format(Date.now()) + " CT"; }
 
 function renderAll() {
-  renderSpot(); renderStrip(); renderDay(); renderTides(); renderForecast(); renderNotes(); renderBest();
+  renderSpot(); renderStrip(); renderDay(); renderTides(); renderForecast(); renderSpotPanel(); renderBest();
   $("datePick").value = keyOf(state.sel);
   loadTides(); loadLive(); loadForecast();
 }

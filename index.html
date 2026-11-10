@@ -137,7 +137,9 @@ input.pill{padding:5px 10px}
 .win.is-past{opacity:.5}
 .win.night .src{color:var(--muted)}
 /* Game plan */
-.plan-top{display:flex;flex-direction:column;gap:8px;margin:10px 0 0}
+.plan-top{display:flex;flex-direction:column;gap:8px}
+.plans{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.win .src .best-tag{margin:0 0 0 2px}
 .plan-top b{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:8px}
 .targets,.mynote{margin:0;font-size:15px;line-height:1.45;max-width:62ch}
 .regs{color:var(--alert);font-weight:700}
@@ -292,8 +294,7 @@ footer p{margin:0 0 6px}
         <div class="rating" id="dayRating"></div>
       </div>
       <dl class="facts" id="facts"></dl>
-      <h3 class="label">Game plan · from land</h3>
-      <div class="plan-top" id="planTop"></div>
+      <h3 class="label">Feeding windows</h3>
       <ol class="windows" id="windows"></ol>
       <figure class="chart" style="margin-inline:0">
         <svg id="chart" viewBox="0 0 360 178" role="img" aria-label="Activity through the day"></svg>
@@ -326,6 +327,12 @@ footer p{margin:0 0 6px}
       <section class="panel fc">
         <div class="panel-head"><h3 class="label">Weather forecast</h3><span class="est">NWS</span></div>
         <div class="fc-rows" id="fc"><p class="small">Loading the forecast…</p></div>
+      </section>
+
+      <section class="panel plan-panel">
+        <div class="panel-head"><h3 class="label">Game plan · from land</h3></div>
+        <div class="plan-top" id="planTop"></div>
+        <ol class="plans" id="plans"></ol>
       </section>
 
       <section class="panel notes">
@@ -1093,7 +1100,20 @@ function renderDay() {
   $("dayRating").innerHTML = `${starsHTML(I.stars)}<span class="rating-word">${WORDS[I.stars - 1]}</span><span class="sr">${I.stars} of 5</span>`;
   const f = (k, v) => `<div><dt>${k}</dt><dd>${v ? T(v) : "None"}</dd></div>`;
   $("facts").innerHTML = f("Sunrise", I.sunrise) + f("Sunset", I.sunset) + f("Moonrise", I.moonrise) + f("Moonset", I.moonset);
-  renderPlan(I, isToday, now);
+  const bestW = renderPlan(I, isToday, now);
+  if (!I.windows.length) { $("windows").innerHTML = `<li class="empty">No windows fall on this day.</li>`; }
+  else {
+    $("windows").innerHTML = I.windows.map(w => {
+      const st = isToday ? windowStatus(w, now) : { cls: "", text: "" };
+      const sunTag = w.sun ? ` · <b>at ${w.sun}</b>` : "";
+      const p = w.b > now ? forecastAt(w.c) : null;
+      const wx = p && p.hi != null ? ` · <span class="wx">wind ${esc(windTxt(p))}</span>` : "";
+      const best = w === bestW ? ` · <span class="best-tag">Best bet</span>` : "";
+      return `<li class="win ${w.kind} ${st.cls}"><span class="kind">${w.kind}</span>
+        <span class="time">${range(w.a, w.b)}</span><span class="src">${w.src}${sunTag}${wx}${best}</span>
+        <span class="status">${st.text}</span></li>`;
+    }).join("");
+  }
   renderChart(I, isToday, now);
 }
 function renderChart(I, isToday, now) {
@@ -1329,7 +1349,6 @@ function renderPlan(I, isToday, now) {
     + (alerts.length ? `<ul class="alerts">${alerts.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : "")
     + (note ? `<p class="mynote"><b>Your note</b>${esc(note)}</p>` : "");
 
-  if (!I.windows.length) { $("windows").innerHTML = `<li class="empty">No windows fall on this day.</li>`; return; }
   const plans = I.windows.map(w => {
     const light = lightOf(w, I), stage = tideStage(ex, w);
     const wind = w.b > now ? forecastAt(w.c) : null;
@@ -1337,15 +1356,11 @@ function renderPlan(I, isToday, now) {
   });
   const open = plans.filter(p => p.light !== "night" && (!isToday || p.w.b > now));
   const best = open.length > 1 ? open.reduce((x, y) => (y.score > x.score ? y : x)) : open[0] || null;
-  const lit = type === "pier" || type === "jetty" || type === "channel";
-  $("windows").innerHTML = plans.map(p => {
+  const dayPlans = plans.filter(p => p.light !== "night");
+  if (!dayPlans.length) { $("plans").innerHTML = `<li class="empty">No daylight windows on this day.</li>`; return null; }
+  $("plans").innerHTML = dayPlans.map(p => {
     const { w, light, stage, wind } = p;
     const st = isToday ? windowStatus(w, now) : { cls: "", text: "" };
-    if (light === "night") {
-      return `<li class="win ${w.kind} night ${st.cls}"><span class="kind">${w.kind}</span>
-        <span class="time">${range(w.a, w.b)}</span><span class="src">${w.src} · night${lit ? " · fish lighted spots" : ""}</span>
-        <span class="status">${st.text}</span></li>`;
-    }
     const when = light === "dawn" ? " at sunrise" : light === "dusk" ? " at sunset" : "";
     const conds = [w.src + when, stage && stage.text, wind && wind.hi != null ? windTxt(wind) : ""].filter(Boolean).join(" · ");
     const isBest = p === best;
@@ -1357,6 +1372,7 @@ function renderPlan(I, isToday, now) {
         <div><dt>Throw</dt><dd>${esc(throwFor(type, stage, light, temp, state.sel))}</dd></div>
       </dl></li>`;
   }).join("");
+  return best ? best.w : null;
 }
 
 function renderSpotPanel() {

@@ -136,6 +136,9 @@ input.pill{padding:5px 10px}
 .win.is-now .status{color:var(--sun)}
 .win.is-past{opacity:.5}
 .win.night .src{color:var(--muted)}
+.win .src .span{color:var(--water);font-weight:600}
+.next-row button{width:100%;display:flex;align-items:baseline;gap:8px;text-align:left;background:none;border:1px dashed var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;color:var(--muted);font-size:14px;font-variant-numeric:tabular-nums}
+.next-row button:hover{border-color:var(--sun);color:var(--fg)}
 /* Game plan */
 .plan-top{display:flex;flex-direction:column;gap:8px}
 .plans{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
@@ -143,6 +146,8 @@ input.pill{padding:5px 10px}
 .plan-top b{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:8px}
 .targets,.mynote{margin:0;font-size:15px;line-height:1.45;max-width:62ch}
 .regs{color:var(--alert);font-weight:700}
+.whead{font-weight:700}
+.wind-alert b,.wind-alert .whead{color:var(--alert)}
 .alerts{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
 .alerts li{font-size:14px;line-height:1.4;font-weight:600;color:var(--alert)}
 .plan{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;background:var(--raised);border:1px solid transparent}
@@ -153,7 +158,7 @@ input.pill{padding:5px 10px}
 .plan.major .kind{background:var(--sun);color:var(--sun-ink)}
 .plan.minor .kind{border:1px solid var(--sand);color:var(--sand)}
 .plan-head .time{font-family:var(--font-display);font-size:clamp(20px,5.6vw,25px);font-weight:700;line-height:1.05;font-variant-numeric:tabular-nums}
-.best-tag{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sun);margin-right:4px}
+.best-tag{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sun);margin-right:4px;white-space:nowrap}
 .plan-head .status{font-size:13px;font-weight:700;color:var(--muted);white-space:nowrap;text-align:right}
 .plan.is-now .status{color:var(--sun)}
 .plan .cond{margin:0;font-size:14px;line-height:1.4;color:var(--water)}
@@ -377,7 +382,8 @@ function setLocation(lat, lng) { PHI = RAD * lat; LW = RAD * -lng; }
 function toDays(ms) { return ms / DAY - 0.5 + 2440588 - 2451545; }
 function rightAsc(l, b) { return Math.atan2(Math.sin(l) * Math.cos(OBL) - Math.tan(b) * Math.sin(OBL), Math.cos(l)); }
 function declin(l, b) { return Math.asin(Math.sin(b) * Math.cos(OBL) + Math.cos(b) * Math.sin(OBL) * Math.sin(l)); }
-function sidereal(d) { return RAD * (280.16 + 360.9856235 * d) - LW; }
+// Greenwich mean sidereal time (IAU 1982), d = days from J2000.0.
+function sidereal(d) { return RAD * (280.46061837 + 360.98564736629 * d) - LW; }
 function altitude(H, dec) { return Math.asin(Math.sin(PHI) * Math.sin(dec) + Math.cos(PHI) * Math.cos(dec) * Math.cos(H)); }
 function wrapPi(a) { a = ((a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI); return a - Math.PI; }
 
@@ -462,7 +468,8 @@ function dayInfo(y, m, d) {
     if (sunrise && w.a < sunrise + HOUR && w.b > sunrise - HOUR) w.sun = "sunrise";
     else if (sunset && w.a < sunset + HOUR && w.b > sunset - HOUR) w.sun = "sunset";
   });
-  const windows = all.filter(w => inDay(w.c));
+  const windows = all.filter(w => inDay(w.c)); // windows that belong to this day (used for ratings)
+  const shown = all.filter(w => w.b > start && w.a < end); // everything that overlaps this day, including overnight windows
 
   const noon = (start + end) / 2, ms = moonState(noon);
   const p0 = phaseAt(start), p1 = phaseAt(end), pn = phaseAt(noon);
@@ -505,7 +512,7 @@ function dayInfo(y, m, d) {
   return {
     y, m, d, start, end, sunrise, sunset,
     moonrise: ev.rise.find(inDay) || null, moonset: ev.set.find(inDay) || null,
-    windows, all, phase: pn, name, event, lit, near, nearType, score, stars,
+    windows, shown, all, phase: pn, name, event, lit, near, nearType, score, stars,
     decDeg, dist: ms.dist, tide, curve,
   };
 }
@@ -606,7 +613,7 @@ const fmtClock = new Intl.DateTimeFormat("en-US", { timeZone: TZ, weekday: "shor
 
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const T = ms => fmtTime.format(ms);
+const T = ms => fmtTime.format(Math.round(ms / MIN) * MIN); // round to the nearest minute, like published tables
 function range(a, b) {
   const A = T(a), B = T(b);
   return A.slice(-2) === B.slice(-2) ? A.slice(0, -3) + "–" + B : A + "–" + B;
@@ -1101,19 +1108,23 @@ function renderDay() {
   const f = (k, v) => `<div><dt>${k}</dt><dd>${v ? T(v) : "None"}</dd></div>`;
   $("facts").innerHTML = f("Sunrise", I.sunrise) + f("Sunset", I.sunset) + f("Moonrise", I.moonrise) + f("Moonset", I.moonset);
   const bestW = renderPlan(I, isToday, now);
-  if (!I.windows.length) { $("windows").innerHTML = `<li class="empty">No windows fall on this day.</li>`; }
-  else {
-    $("windows").innerHTML = I.windows.map(w => {
-      const st = isToday ? windowStatus(w, now) : { cls: "", text: "" };
-      const sunTag = w.sun ? ` · <b>at ${w.sun}</b>` : "";
-      const p = w.b > now ? forecastAt(w.c) : null;
-      const wx = p && p.hi != null ? ` · <span class="wx">wind ${esc(windTxt(p))}</span>` : "";
-      const best = w === bestW ? ` · <span class="best-tag">Best bet</span>` : "";
-      return `<li class="win ${w.kind} ${st.cls}"><span class="kind">${w.kind}</span>
-        <span class="time">${range(w.a, w.b)}</span><span class="src">${w.src}${sunTag}${wx}${best}</span>
-        <span class="status">${st.text}</span></li>`;
-    }).join("");
-  }
+  const dowOf = ymd => fmtDow.format(Date.UTC(ymd[0], ymd[1] - 1, ymd[2]));
+  const nextYmd = addDays(state.sel, 1), prevD = dowOf(addDays(state.sel, -1)), nextD = dowOf(nextYmd);
+  const rows = I.shown.map(w => {
+    const st = isToday ? windowStatus(w, now) : { cls: "", text: "" };
+    const sunTag = w.sun ? ` · <b>at ${w.sun}</b>` : "";
+    const p = w.b > now ? forecastAt(w.c) : null;
+    const wx = p && p.hi != null ? ` · <span class="wx">wind ${esc(windTxt(p))}</span>` : "";
+    const best = w === bestW ? ` · <span class="best-tag">Best bet</span>` : "";
+    const span = w.a < I.start ? ` · <span class="span">started ${prevD} night</span>`
+      : w.b > I.end ? ` · <span class="span">runs into ${nextD}</span>` : "";
+    return `<li class="win ${w.kind} ${st.cls}"><span class="kind">${w.kind}</span>
+      <span class="time">${range(w.a, w.b)}</span><span class="src">${w.src}${span}${sunTag}${wx}${best}</span>
+      <span class="status">${st.text}</span></li>`;
+  });
+  const nx = info(nextYmd).shown.find(w => w.a >= I.end);
+  if (nx) rows.push(`<li class="next-row"><button type="button" data-k="${keyOf(nextYmd)}"><span class="label">Next</span>${nextD} · ${range(nx.a, nx.b)} · ${nx.kind === "major" ? "Major" : "Minor"}${nx.sun ? ` at ${nx.sun}` : ""}</button></li>`);
+  $("windows").innerHTML = I.shown.length ? rows.join("") : `<li class="empty">No windows fall on this day.</li>` + rows.join("");
   renderChart(I, isToday, now);
 }
 function renderChart(I, isToday, now) {
@@ -1235,7 +1246,7 @@ function targetsFor(type, ymd, temp) {
   return { text: s, flounder };
 }
 
-function whereFor(type, stage, light, wind, temp) {
+function whereFor(type, stage, light, wind, temp, covered = {}) {
   const k = stage ? stage.kind : null;
   const slack = k === "turnHigh" || k === "turnLow" || k === "flat";
   if (light === "night") {
@@ -1279,9 +1290,11 @@ function whereFor(type, stage, light, wind, temp) {
         : "Drains, points, and shell along the bank.";
   }
   if (temp < 60 && (type === "shore" || type === "flats")) s = "Fish deeper: the first drop-off and channels. Sunny afternoons warm the shallows.";
+  // Only add wind advice the day's Wind line doesn't already give (e.g. the windows after a front passes).
   if (wind && wind.hi != null) {
-    if (NORTHERLY.test(wind.dir) && wind.hi >= 12 && (type === "shore" || type === "flats")) s += " North wind drains the shallows, so favor deeper edges.";
-    else if (wind.hi >= 18) s += " If it's too rough, find a bank or side out of the wind.";
+    const northy = NORTHERLY.test(wind.dir) && wind.hi >= 12 && (type === "shore" || type === "flats");
+    if (northy && !covered.north) s += " North wind drains the shallows, so favor deeper edges.";
+    else if (!northy && wind.hi >= 18 && !covered.rough) s += " If it's too rough, find a bank or side out of the wind.";
   }
   return s;
 }
@@ -1320,6 +1333,72 @@ function planScore(w, stage, light, wind) {
   return s;
 }
 
+// Wind summary for the selected day (daylight hours, or the rest of today), from the NWS hourly forecast.
+const DIR16 = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+function windGroup(d) {
+  if (/^(N|NNE|NE|NNW|NW)$/.test(d)) return "north";
+  if (/^(S|SSE|SE|SSW|SW)$/.test(d)) return "south";
+  if (/^(ENE|E|ESE)$/.test(d)) return "east";
+  if (/^(WSW|W|WNW)$/.test(d)) return "west";
+  return "";
+}
+function meanDir(P) { // speed-weighted average direction
+  let x = 0, y = 0;
+  P.forEach(p => { const i = DIR16.indexOf(p.dir); if (i < 0) return; const a = i * 22.5 * RAD, w = p.hi || 1; x += Math.sin(a) * w; y += Math.cos(a) * w; });
+  if (!x && !y) return "";
+  return DIR16[Math.round(((Math.atan2(x, y) / RAD + 360) % 360) / 22.5) % 16];
+}
+function windNote(I, isToday, now, type) {
+  if (I.end < now) return null;
+  const P = state.fc.status === "ok" ? state.fc.periods : null;
+  if (!P) {
+    const L = state.live.status === "ok" ? state.live : null;
+    return isToday && L && L.wind ? { head: `${L.wind.d.dr || ""} ${Math.round(+L.wind.d.s * 1.15078)} mph right now.`.trim(), tips: [] } : null;
+  }
+  let a = I.sunrise || I.start + 6 * HOUR, when = "";
+  const b = I.sunset || I.start + 18 * HOUR;
+  if (isToday) a = Math.max(a, now);
+  let span = P.filter(p => p.end > a && p.t < b && p.hi != null);
+  if (isToday && !span.length) { span = P.filter(p => p.end > now && p.t < I.end && p.hi != null); when = "Tonight: "; }
+  if (!span.length) return P.length && I.start >= P[P.length - 1].end ? { head: "The wind forecast only reaches about a week ahead.", tips: [] } : null;
+
+  const lo = Math.min(...span.map(p => p.lo)), hi = Math.max(...span.map(p => p.hi));
+  const n = Math.max(1, Math.floor(span.length / 3));
+  const early = span.slice(0, n), late = span.slice(-n);
+  const avg = A => A.reduce((s, p) => s + p.hi, 0) / A.length;
+  const dEarly = meanDir(early), dLate = meanDir(late), dAll = meanDir(span);
+  const gEarly = windGroup(dEarly), gLate = windGroup(dLate), g = windGroup(dAll);
+  const front = gLate === "north" && gEarly !== "" && gEarly !== "north" && avg(late) >= 10;
+  const sp = lo === hi ? `${hi} mph` : `${lo}–${hi} mph`;
+  let head;
+  if (front) {
+    const i = span.findIndex((p, k) => span.slice(k, k + 3).every(q => windGroup(q.dir) === "north"));
+    head = `${when}${dEarly} turning ${dLate} around ${T((span[i] || late[0]).t)}, ${sp}. A front is moving through.`;
+  } else {
+    const trend = avg(late) - avg(early) >= 4 ? ", building later" : avg(early) - avg(late) >= 4 ? ", easing later" : "";
+    head = `${when}${dAll} ${sp}${trend}.`;
+  }
+  const tips = [], strong = hi >= 20, m = state.sel[1];
+  const add = (k, text) => tips.push({ k, text });
+  if (front) add("front", "Fish often feed hard right before a front. The bite usually slows for a day or two after it.");
+  if (strong) add("rough", `Rough from land. Shallow water will muddy, which suits reds and drum more than trout.${type === "jetty" ? " Watch for waves over the rocks." : ""}`);
+  if (!front && g === "north" && avg(span) >= 10) {
+    add("north", "North wind pushes water out of the bay, so expect lower water and fish on deeper edges.");
+    if (avg(span) >= 12 && (m >= 10 || m <= 4)) add("post", "Typical after a front: the bite can be slow, and afternoons are often better as the water warms.");
+  } else if (g === "south" && avg(span) >= 10) add("south", "South wind pushes Gulf water in, so fish can move up shallow along shorelines.");
+  if (tips.length < 2 && !strong) {
+    if (hi < 6) add("calm", "Calm and likely clear water. Fish early and late, and make long casts.");
+    else if (hi <= 15) add("breeze", "A good fishing breeze. Fish the bank or side the wind blows into, where bait gets pushed.");
+    else add("rough", "Choppy. Use heavier weights and fish the sheltered side of piers and jetties.");
+  }
+  const kept = tips.slice(0, 2);
+  return {
+    head, tips: kept.map(t => t.text), alert: front || strong,
+    // What the Wind line already tells you, so the window cards don't repeat it.
+    covers: { north: kept.some(t => t.k === "north"), rough: kept.some(t => t.k === "rough") },
+  };
+}
+
 function renderPlan(I, isToday, now) {
   const type = spotType();
   const ex = state.tides.status === "ok" ? state.tides.ex : null;
@@ -1334,18 +1413,11 @@ function renderPlan(I, isToday, now) {
     if (diff <= -0.5) alerts.push(`Water is ${Math.abs(diff).toFixed(1)} ft below forecast at ${shortName(L.level.station)}. Shallows may be drained.`);
     else if (diff >= 0.5) alerts.push(`Water is ${diff.toFixed(1)} ft above forecast at ${shortName(L.level.station)}. Fish can push up shallow.`);
   }
-  if (isToday && L && L.wind) {
-    const mph = +L.wind.d.s * 1.15078;
-    if (NORTHERLY.test(L.wind.d.dr || "") && mph >= 15) alerts.push(`North wind at ${Math.round(mph)} mph right now. Expect the water to drop.`);
-  }
-  if (state.fc.status === "ok") {
-    const a = I.sunrise || I.start + 6 * HOUR, b = I.sunset || I.start + 18 * HOUR;
-    const gusty = state.fc.periods.filter(p => p.t >= a && p.t < b && p.end > now && p.hi != null && p.hi >= 20);
-    if (gusty.length) { const pk = gusty.reduce((x, y) => (y.hi > x.hi ? y : x)); alerts.push(`Windy: up to ${pk.hi} mph from the ${pk.dir} around ${T(pk.t)}.`); }
-  }
+  const wn = windNote(I, isToday, now, type);
   const note = spotNote();
   $("planTop").innerHTML =
     `<p class="targets"><b>Targets</b>${esc(tg.text)}${tg.flounder ? ` <span class="regs">${esc(tg.flounder)}</span>` : ""}</p>`
+    + (wn ? `<p class="targets${wn.alert ? " wind-alert" : ""}"><b>Wind</b><span class="whead">${esc(wn.head)}</span>${wn.tips.length ? " " + esc(wn.tips.join(" ")) : ""}</p>` : "")
     + (alerts.length ? `<ul class="alerts">${alerts.map(a => `<li>${esc(a)}</li>`).join("")}</ul>` : "")
     + (note ? `<p class="mynote"><b>Your note</b>${esc(note)}</p>` : "");
 
@@ -1368,7 +1440,7 @@ function renderPlan(I, isToday, now) {
       <div class="plan-head"><span class="kind">${w.kind}</span><span class="time">${range(w.a, w.b)}</span><span class="status">${st.text}</span></div>
       <p class="cond">${isBest ? `<span class="best-tag">Best bet</span>` : ""}${esc(conds)}</p>
       <dl class="plan-lines">
-        <div><dt>Where</dt><dd>${esc(whereFor(type, stage, light, wind, temp))}</dd></div>
+        <div><dt>Where</dt><dd>${esc(whereFor(type, stage, light, wind, temp, wn ? wn.covers : {}))}</dd></div>
         <div><dt>Throw</dt><dd>${esc(throwFor(type, stage, light, temp, state.sel))}</dd></div>
       </dl></li>`;
   }).join("");
@@ -1426,6 +1498,7 @@ function select(ymd, { recenter = false } = {}) {
 const parseKey = k => k.split("-").map(Number);
 
 $("strip").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) select(parseKey(b.dataset.k)); });
+$("windows").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) select(parseKey(b.dataset.k)); });
 $("tideSpark").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) select(parseKey(b.dataset.k)); });
 $("best").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) select(parseKey(b.dataset.k), { recenter: true }); });
 $("todayBtn").addEventListener("click", () => { state.stripStart = state.today; select(state.today); $("strip").scrollLeft = 0; });
